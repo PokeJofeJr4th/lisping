@@ -15,7 +15,7 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
     // the array of atoms at the current depth
     let mut current_array: Vec<Syntax> = Vec::new();
     'main: while let Some((row, col, c)) = chars.next() {
-        println!("{parse_stack:#?}\n{current_array:#?}\n{row}:{col} = {c:?}");
+        // println!("{parse_stack:#?}\n{current_array:#?}\n{row}:{col} = {c:?}");
         // begin a comment
         if c == '#' {
             // go to the end of the line
@@ -35,7 +35,7 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
                 current_array = previous_level;
                 current_array.push(arr);
             } else {
-                return Ok(current_array);
+                return Err(format!("Unmatched closing parenthesis at {row}:{col}"));
             }
         } else if c.is_whitespace() {
         } else if c.is_numeric() {
@@ -65,5 +65,9 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
             current_array.push(Syntax::Identifier(id_buffer));
         }
     }
-    Err("Uh oh!".to_string())
+    if parse_stack.is_empty() {
+        Ok(current_array)
+    } else {
+        Err("Unmatched opening parenthesis".to_string())
+    }
 }
