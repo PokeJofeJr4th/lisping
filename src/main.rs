@@ -2,9 +2,11 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
+use parser::Syntax;
 
+mod eval;
 pub mod line_count;
-mod parser;
+pub mod parser;
 
 #[derive(Parser)]
 struct Args {
@@ -16,5 +18,7 @@ fn main() {
     let args = Args::parse();
     let src = fs::read_to_string(&args.src).unwrap();
     let code = parser::parse(&src).unwrap();
-    println!("{code:?}");
+    // println!("{code:?}");
+    let result = eval::eval(&Syntax::Array(code));
+    println!("{result:?}");
 }
