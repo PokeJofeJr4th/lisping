@@ -73,6 +73,16 @@ impl Value {
             }
         }
     }
+
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Self::Int(i) => *i > 0,
+            Self::String(s) => !s.is_empty(),
+            Self::Identifier(i) => i == "true",
+            Self::Array(vec) => !vec.is_empty(),
+            Self::Function(_) => true,
+        }
+    }
 }
 
 impl Display for Value {
@@ -103,7 +113,8 @@ impl Debug for Value {
     }
 }
 
-// syntax => value
+/// syntax => value
+#[allow(clippy::too_many_lines)]
 pub fn eval(syn: &Value) -> Value {
     match syn {
         Value::Array(arr) => {
@@ -150,6 +161,35 @@ pub fn eval(syn: &Value) -> Value {
                 let mut body = body.clone();
                 body.replace(&param_ids, &arr[1..]);
                 eval(&body)
+            } else if arr[0].is_identifier("if") {
+                match &arr[..] {
+                    [] => Value::Identifier("true".to_string()),
+                    [cond] => {
+                        if eval(cond).is_truthy() {
+                            Value::Identifier("true".to_string())
+                        } else {
+                            Value::Identifier("false".to_string())
+                        }
+                    }
+                    [cond, t] => {
+                        if eval(cond).is_truthy() {
+                            eval(t)
+                        } else {
+                            Value::Array(Vec::new())
+                        }
+                    }
+                    [cond, t, f] => {
+                        if eval(cond).is_truthy() {
+                            eval(t)
+                        } else {
+                            eval(f)
+                        }
+                    }
+                    _ => Value::error(vec![
+                        Value::Identifier("TooManyArgs".to_string()),
+                        syn.clone(),
+                    ]),
+                }
             } else if arr[0].is_identifier("quote") {
                 arr[1].clone()
             } else if arr[0].is_identifier("quasiquote") {

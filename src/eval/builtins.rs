@@ -50,6 +50,7 @@ pub fn quote(args: Vec<Value>) -> Value {
     let mut args = VecDeque::from(args);
     while let Some(arg) = args.pop_front() {
         match arg {
+            #[allow(clippy::cast_sign_loss)]
             Value::Int(i) => match char::try_from(i as u32) {
                 Ok(c) => str.push(c),
                 Err(_) => {
@@ -65,6 +66,7 @@ pub fn quote(args: Vec<Value>) -> Value {
     Value::String(str)
 }
 
+#[allow(clippy::needless_pass_by_value)]
 pub fn eval(args: Vec<Value>) -> Value {
     if args.len() == 1 {
         super::eval(&args[0])

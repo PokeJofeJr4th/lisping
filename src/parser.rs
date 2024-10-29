@@ -66,6 +66,7 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
                         int_value += *c as u32 - '0' as u32;
                         chars.next();
                     }
+                    #[allow(clippy::cast_possible_wrap)]
                     break 'inner Value::Int(int_value as i32);
                 } else {
                     let mut id_buffer = String::from(c);
