@@ -58,6 +58,21 @@ impl Value {
         msg.insert(0, Self::Identifier("err".to_string()));
         Self::Array(msg)
     }
+
+    pub fn quasiquote(&self) -> Self {
+        match self {
+            other @ (Self::Int(_) | Self::String(_) | Self::Identifier(_) | Self::Function(_)) => {
+                other.clone()
+            }
+            Self::Array(vec) => {
+                if vec.first().is_some_and(|val| val.is_identifier("unquote")) {
+                    eval(&vec[1])
+                } else {
+                    Self::Array(vec.iter().map(Self::quasiquote).collect())
+                }
+            }
+        }
+    }
 }
 
 impl Display for Value {
@@ -137,6 +152,8 @@ pub fn eval(syn: &Value) -> Value {
                 eval(&body)
             } else if arr[0].is_identifier("quote") {
                 arr[1].clone()
+            } else if arr[0].is_identifier("quasiquote") {
+                arr[1].quasiquote()
             } else if arr[0].is_identifier("\\") || arr[0].is_identifier("err") {
                 // if it is a function, return the function
                 Value::Array(arr.clone())

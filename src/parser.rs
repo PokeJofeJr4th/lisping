@@ -4,6 +4,8 @@ use crate::{eval::Value, line_count::LineCountable};
 enum ParserState {
     Array,
     Quote,
+    QuasiQuote,
+    Unquote,
 }
 
 #[allow(clippy::unnecessary_wraps)]
@@ -43,6 +45,18 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
                     ]));
 
                     states.pop();
+                } else if states.last() == Some(&ParserState::QuasiQuote) {
+                    current_array.push(Value::Array(vec![
+                        Value::Identifier("quasiquote".to_string()),
+                        arr,
+                    ]));
+                    states.pop();
+                } else if states.last() == Some(&ParserState::Unquote) {
+                    current_array.push(Value::Array(vec![
+                        Value::Identifier("unquote".to_string()),
+                        arr,
+                    ]));
+                    states.pop();
                 } else {
                     current_array.push(arr);
                 }
@@ -51,6 +65,10 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
             }
         } else if c == '\'' {
             states.push(ParserState::Quote);
+        } else if c == '`' {
+            states.push(ParserState::QuasiQuote);
+        } else if c == '~' {
+            states.push(ParserState::Unquote);
         } else if c.is_whitespace() {
         } else if c.is_numeric() {
             let mut int_value = c as u32 - '0' as u32;
