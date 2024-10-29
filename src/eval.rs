@@ -1,4 +1,7 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{
+    fmt::{Debug, Display},
+    rc::Rc,
+};
 
 mod builtins;
 
@@ -44,18 +47,41 @@ impl Value {
         }
         Some(args)
     }
+
+    pub fn is_identifier(&self, id: &str) -> bool {
+        let Self::Identifier(my_id) = self else {
+            return false;
+        };
+        my_id == id
+    }
 }
 
-impl Debug for Value {
+impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Int(arg0) => write!(f, "{arg0}"),
             Self::Error(arg0) => f.debug_tuple("Error").field(arg0).finish(),
             Self::String(arg0) => write!(f, "{arg0:?}"),
-            Self::Identifier(arg0) => write!(f, "`{arg0}`"),
-            Self::Array(arg0) => f.debug_list().entries(arg0).finish(),
+            Self::Identifier(arg0) => write!(f, "{arg0}"),
+            Self::Array(arg0) => {
+                write!(f, "(")?;
+                for (i, v) in arg0.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{v}")?;
+                    } else {
+                        write!(f, " {v}")?;
+                    }
+                }
+                write!(f, ")")
+            }
             Self::Function(_) => f.debug_struct("Function").finish_non_exhaustive(),
         }
+    }
+}
+
+impl Debug for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self}")
     }
 }
 
@@ -107,6 +133,9 @@ pub fn eval(syn: &Value) -> Value {
                 let mut body = body.clone();
                 body.replace(&param_ids, &arr[1..]);
                 eval(&body)
+            } else if arr[0].is_identifier("\\") {
+                // if it is a function, return the function
+                Value::Array(arr.clone())
             } else {
                 match eval(&arr[0]) {
                     Value::Function(func) => func(arr.iter().skip(1).map(eval).collect()),

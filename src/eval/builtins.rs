@@ -22,27 +22,26 @@ pub fn add(args: Vec<Value>) -> Value {
 }
 
 pub fn sub(args: Vec<Value>) -> Value {
-    let mut sum = 0;
+    let mut difference = 0;
     for arg in args {
         let Value::Int(i) = arg else {
             return Value::Error(format!("{arg:?} is not a number"));
         };
         // I promise this makes a little bit of sense
-        sum = -i - sum;
+        difference = -i - difference;
     }
-    Value::Int(sum)
+    Value::Int(difference)
 }
 
 pub fn mul(args: Vec<Value>) -> Value {
-    let mut sum = 1;
+    let mut product = 1;
     for arg in args {
         let Value::Int(i) = arg else {
             return Value::Error(format!("{arg:?} is not a number"));
         };
-        // I promise this makes a little bit of sense
-        sum *= i;
+        product *= i;
     }
-    Value::Int(sum)
+    Value::Int(product)
 }
 
 pub fn quote(args: Vec<Value>) -> Value {
