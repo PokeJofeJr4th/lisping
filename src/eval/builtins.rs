@@ -8,6 +8,7 @@ thread_local! {
     pub static MUL: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(mul));
     pub static QUOTE: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(quote));
     pub static LIST: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(Value::Array));
+    pub static EVAL: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(eval));
 }
 
 pub fn add(args: Vec<Value>) -> Value {
@@ -62,4 +63,12 @@ pub fn quote(args: Vec<Value>) -> Value {
         }
     }
     Value::String(str)
+}
+
+pub fn eval(args: Vec<Value>) -> Value {
+    if args.len() == 1 {
+        super::eval(&args[0])
+    } else {
+        Value::Array(args.iter().map(super::eval).collect())
+    }
 }

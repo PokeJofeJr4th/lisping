@@ -172,6 +172,7 @@ pub fn eval(syn: &Value) -> Value {
             "*" => Value::Function(builtins::MUL.with(|c| c.borrow().clone())),
             "\"" => Value::Function(builtins::QUOTE.with(|c| c.borrow().clone())),
             "list" => Value::Function(builtins::LIST.with(|c| c.borrow().clone())),
+            "eval" => Value::Function(builtins::EVAL.with(|c| c.borrow().clone())),
             _ => Value::error(vec![
                 Value::Identifier("UnresolvedIdentifier".to_string()),
                 syn.clone(),
