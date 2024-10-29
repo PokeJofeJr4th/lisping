@@ -54,11 +54,9 @@ impl Value {
         my_id == id
     }
 
-    pub fn error(msg: Self) -> Self {
-        Self::Array(vec![
-            Self::Identifier("err".to_string()),
-            Self::Array(vec![msg]),
-        ])
+    pub fn error(mut msg: Vec<Self>) -> Self {
+        msg.insert(0, Self::Identifier("err".to_string()));
+        Self::Array(msg)
     }
 }
 
@@ -99,42 +97,40 @@ pub fn eval(syn: &Value) -> Value {
             }
             if let Some(args) = arr[0].as_function("\\") {
                 let [param, body] = args else {
-                    return Value::error(Value::String(format!(
-                        "Function `\\` expected 2 quotes arguments; got {}",
-                        arr.len() - 1
-                    )));
+                    return Value::error(vec![
+                        Value::Identifier("InvalidLambdaError".to_string()),
+                        arr[0].clone(),
+                    ]);
                 };
                 let param_ids = match param {
                     Value::Identifier(id) => {
                         vec![id.clone()]
                     }
-                    Value::Array(arr) => {
+                    Value::Array(param_ids) => {
                         let mut ids = Vec::new();
-                        for id in arr {
+                        for id in param_ids {
                             let Value::Identifier(id) = id else {
-                                return Value::error(
-                                    Value::String(
-                                    "First argument of '\\' must be an identifier or list of identifiers"
-                                        .to_string())
-                                );
+                                return Value::error(vec![
+                                    Value::Identifier("InvalidLambdaError".to_string()),
+                                    arr[0].clone(),
+                                ]);
                             };
                             ids.push(id.clone());
                         }
                         ids
                     }
                     _ => {
-                        return Value::error(Value::String(
-                            "First argument of '\\' must be an identifier or list of identifiers"
-                                .to_string(),
-                        ))
+                        return Value::error(vec![
+                            Value::Identifier("InvalidLambdaError".to_string()),
+                            arr[0].clone(),
+                        ])
                     }
                 };
                 if arr.len() - 1 < param_ids.len() {
-                    return Value::error(Value::String(format!(
-                        "Lambda expression requires {} arguments; got {}",
-                        param_ids.len(),
-                        arr.len() - 1
-                    )));
+                    return Value::error(vec![
+                        Value::Identifier("InvalidLambdaError".to_string()),
+                        arr[0].clone(),
+                    ]);
                 }
                 let mut body = body.clone();
                 body.replace(&param_ids, &arr[1..]);
@@ -145,7 +141,9 @@ pub fn eval(syn: &Value) -> Value {
             } else {
                 match eval(&arr[0]) {
                     Value::Function(func) => func(arr.iter().skip(1).map(eval).collect()),
-                    other => Value::error(Value::String(format!("Invalid function {other:?}"))),
+                    other => {
+                        Value::error(vec![Value::Identifier("NotAFunction".to_string()), other])
+                    }
                 }
             }
         }
@@ -155,7 +153,10 @@ pub fn eval(syn: &Value) -> Value {
             "*" => Value::Function(builtins::MUL.with(|c| c.borrow().clone())),
             "\"" => Value::Function(builtins::QUOTE.with(|c| c.borrow().clone())),
             "list" => Value::Function(builtins::LIST.with(|c| c.borrow().clone())),
-            o => Value::error(Value::String(format!("Unresolved identifier `{o}`"))),
+            _ => Value::error(vec![
+                Value::Identifier("UnresolvedIdentifier".to_string()),
+                syn.clone(),
+            ]),
         },
         other => other.clone(),
     }

@@ -14,7 +14,7 @@ pub fn add(args: Vec<Value>) -> Value {
     let mut sum = 0;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error(Value::String(format!("{arg:?} is not a number")));
+            return Value::error(vec![Value::Identifier("NotANumber".to_string()), arg]);
         };
         sum += i;
     }
@@ -25,7 +25,7 @@ pub fn sub(args: Vec<Value>) -> Value {
     let mut difference = 0;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error(Value::String(format!("{arg:?} is not a number")));
+            return Value::error(vec![Value::Identifier("NotANumber".to_string()), arg]);
         };
         // I promise this makes a little bit of sense
         difference = -i - difference;
@@ -37,7 +37,7 @@ pub fn mul(args: Vec<Value>) -> Value {
     let mut product = 1;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error(Value::String(format!("{arg:?} is not a number")));
+            return Value::error(vec![Value::Identifier("NotANumber".to_string()), arg]);
         };
         product *= i;
     }
@@ -51,7 +51,9 @@ pub fn quote(args: Vec<Value>) -> Value {
         match arg {
             Value::Int(i) => match char::try_from(i as u32) {
                 Ok(c) => str.push(c),
-                Err(err) => return Value::error(Value::String(err.to_string())),
+                Err(_) => {
+                    return Value::error(vec![Value::Identifier("NotACharacter".to_string())])
+                }
             },
             Value::String(s) => str.push_str(&s),
             Value::Array(values) => args.extend(values),
