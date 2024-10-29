@@ -135,6 +135,8 @@ pub fn eval(syn: &Value) -> Value {
                 let mut body = body.clone();
                 body.replace(&param_ids, &arr[1..]);
                 eval(&body)
+            } else if arr[0].is_identifier("quote") {
+                arr[1].clone()
             } else if arr[0].is_identifier("\\") || arr[0].is_identifier("err") {
                 // if it is a function, return the function
                 Value::Array(arr.clone())
