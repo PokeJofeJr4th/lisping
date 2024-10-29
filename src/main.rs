@@ -2,7 +2,7 @@
 use std::{fs, path::PathBuf};
 
 use clap::Parser;
-use parser::Syntax;
+use eval::Value;
 
 mod eval;
 pub mod line_count;
@@ -19,6 +19,6 @@ fn main() {
     let src = fs::read_to_string(&args.src).unwrap();
     let code = parser::parse(&src).unwrap();
     // println!("{code:?}");
-    let result = eval::eval(&Syntax::Array(code));
+    let result = eval::eval(&Value::Array(code));
     println!("{result:?}");
 }

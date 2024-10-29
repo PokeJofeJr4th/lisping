@@ -1,50 +1,4 @@
-use std::fmt::Debug;
-
 use crate::{eval::Value, line_count::LineCountable};
-
-#[derive(Clone)]
-pub enum Syntax {
-    Identifier(String),
-    Array(Vec<Syntax>),
-    Quote(Box<Syntax>),
-    Literal(Value),
-}
-
-impl Debug for Syntax {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Literal(v) => write!(f, "{v:?}"),
-            Self::Identifier(id) => write!(f, "{id}"),
-            Self::Array(vec) => {
-                write!(
-                    f,
-                    "({})",
-                    vec.iter()
-                        .map(|arg| format!("{arg:?}"))
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                )
-            }
-            Self::Quote(syntax) => write!(f, "'{syntax:?}"),
-        }
-    }
-}
-
-impl Syntax {
-    pub fn replace(&mut self, id: &str, value: &Self) {
-        match self {
-            Self::Identifier(mid) if mid == id => {
-                *self = value.clone();
-            }
-            Self::Array(arr) => {
-                for s in arr {
-                    s.replace(id, value);
-                }
-            }
-            _ => {}
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum ParserState {
@@ -54,13 +8,13 @@ enum ParserState {
 
 #[allow(clippy::unnecessary_wraps)]
 /// # Errors
-pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
+pub fn parse(src: &str) -> Result<Vec<Value>, String> {
     let mut chars = src.chars().line_count().peekable();
     // the stack of arrays at higher depths
-    let mut parse_stack: Vec<Vec<Syntax>> = Vec::new();
+    let mut parse_stack: Vec<Vec<Value>> = Vec::new();
     let mut states: Vec<ParserState> = Vec::new();
     // the array of atoms at the current depth
-    let mut current_array: Vec<Syntax> = Vec::new();
+    let mut current_array: Vec<Value> = Vec::new();
     'main: while let Some((row, col, c)) = chars.next() {
         // println!("{parse_stack:#?}\n{current_array:#?}\n{row}:{col} = {c:?}");
         // begin a comment
@@ -79,11 +33,14 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
         } else if c == ')' {
             // end the current array
             if let Some(previous_level) = parse_stack.pop() {
-                let arr = Syntax::Array(current_array);
+                let arr = Value::Array(current_array);
                 current_array = previous_level;
                 states.pop();
                 if states.last() == Some(&ParserState::Quote) {
-                    current_array.push(Syntax::Quote(Box::new(arr)));
+                    current_array.push(Value::Array(vec![
+                        Value::Identifier("quote".to_string()),
+                        arr,
+                    ]));
 
                     states.pop();
                 } else {
@@ -111,12 +68,13 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
                 chars.next();
             }
             if states.last() == Some(&ParserState::Quote) {
-                current_array.push(Syntax::Quote(Box::new(Syntax::Literal(Value::Int(
-                    int_value as i32,
-                )))));
+                current_array.push(Value::Array(vec![
+                    Value::Identifier("quote".to_string()),
+                    (Value::Int(int_value as i32)),
+                ]));
                 states.pop();
             } else {
-                current_array.push(Syntax::Literal(Value::Int(int_value as i32)));
+                current_array.push(Value::Int(int_value as i32));
             }
         } else {
             let mut id_buffer = String::from(c);
@@ -128,10 +86,13 @@ pub fn parse(src: &str) -> Result<Vec<Syntax>, String> {
                 chars.next();
             }
             if states.last() == Some(&ParserState::Quote) {
-                current_array.push(Syntax::Quote(Box::new(Syntax::Identifier(id_buffer))));
+                current_array.push(Value::Array(vec![
+                    Value::Identifier("quote".to_string()),
+                    Value::Identifier(id_buffer),
+                ]));
                 states.pop();
             } else {
-                current_array.push(Syntax::Identifier(id_buffer));
+                current_array.push(Value::Identifier(id_buffer));
             }
         }
     }

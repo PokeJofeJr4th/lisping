@@ -1,8 +1,6 @@
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 
-use crate::parser::Syntax;
-
-use super::{eval, Value};
+use super::Value;
 
 thread_local! {
     pub static ADD: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(add));
@@ -10,7 +8,6 @@ thread_local! {
     pub static MUL: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(mul));
     pub static QUOTE: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(quote));
     pub static LIST: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(Value::Array));
-    pub static LAMBDA: RefCell<Rc<dyn Fn(Vec<Syntax>) -> Syntax>> = RefCell::new(Rc::new(lambda));
 }
 
 pub fn add(args: Vec<Value>) -> Value {
@@ -61,56 +58,8 @@ pub fn quote(args: Vec<Value>) -> Value {
             Value::String(s) => str.push_str(&s),
             Value::Array(values) => args.extend(values),
             Value::Function(_) => todo!(),
-            Value::Macro(_) => todo!(),
-            Value::Quote(_) => todo!(),
+            Value::Identifier(_) => todo!(),
         }
     }
     Value::String(str)
-}
-
-pub fn lambda(args: Vec<Syntax>) -> Syntax {
-    let [param, body] = &args[..] else {
-        return Syntax::Literal(Value::Error(format!(
-            "Function `\\` expected 2 quotes arguments; got {}",
-            args.len()
-        )));
-    };
-    let param_ids = match param {
-        Syntax::Identifier(id) => {
-            vec![id.clone()]
-        }
-        Syntax::Array(arr) => {
-            let mut ids = Vec::new();
-            for id in arr {
-                let Syntax::Identifier(id) = id else {
-                    return Syntax::Literal(Value::Error(
-                        "First argument of '\\' must be a quoted literal or list of literals"
-                            .to_string(),
-                    ));
-                };
-                ids.push(id.clone());
-            }
-            ids
-        }
-        _ => {
-            return Syntax::Literal(Value::Error(
-                "First argument of '\\' must be a quoted literal or list of literals".to_string(),
-            ))
-        }
-    };
-    let body = body.clone();
-    Syntax::Literal(Value::Function(Rc::new(move |args| {
-        if args.len() < param_ids.len() {
-            return Value::Error(format!(
-                "Lambda expression requires {} arguments; got {}",
-                param_ids.len(),
-                args.len()
-            ));
-        }
-        let mut body = body.clone();
-        for (param, value) in param_ids.iter().zip(args) {
-            body.replace(param, &Syntax::Literal(value));
-        }
-        eval(&body)
-    })))
 }
