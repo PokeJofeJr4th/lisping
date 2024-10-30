@@ -63,7 +63,11 @@ pub fn typ(mut args: Vec<Value>) -> Value {
     }
     match &args[0] {
         Value::Int(_) => Value::Identifier("int".to_string()),
-        Value::String(_) => Value::Identifier("string".to_string()),
+        Value::String(s) => match &**s {
+            "\\" => Value::Identifier("function".to_string()),
+            "err" => Value::Identifier("err".to_string()),
+            _ => Value::Identifier("string".to_string()),
+        },
         Value::Identifier(_) => Value::Identifier("identifier".to_string()),
         Value::Array(_) => Value::Identifier("array".to_string()),
         Value::Function(_) => Value::Identifier("function".to_string()),
