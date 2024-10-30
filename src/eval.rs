@@ -113,6 +113,20 @@ impl Debug for Value {
     }
 }
 
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Int(a), Self::Int(b)) => *a == *b,
+            (Self::String(a), Self::String(b)) | (Self::Identifier(a), Self::Identifier(b)) => {
+                a == b
+            }
+            (Self::Array(a), Self::Array(b)) => a == b,
+            (Self::Function(a), Self::Function(b)) => core::ptr::eq(a.as_ref(), b.as_ref()),
+            _ => false,
+        }
+    }
+}
+
 /// syntax => value
 #[allow(clippy::too_many_lines)]
 pub fn eval(syn: &Value) -> Value {
@@ -162,7 +176,7 @@ pub fn eval(syn: &Value) -> Value {
                 body.replace(&param_ids, &arr[1..]);
                 eval(&body)
             } else if arr[0].is_identifier("if") {
-                match &arr[..] {
+                match &arr[1..] {
                     [] => Value::Identifier("true".to_string()),
                     [cond] => {
                         if eval(cond).is_truthy() {
@@ -206,13 +220,16 @@ pub fn eval(syn: &Value) -> Value {
                 }
             }
         }
+        value @ Value::Identifier(id) if &**id == "true" || &**id == "false" => value.clone(),
         Value::Identifier(id) => match &**id {
             "+" => Value::Function(builtins::ADD.with(|c| c.borrow().clone())),
             "-" => Value::Function(builtins::SUB.with(|c| c.borrow().clone())),
             "*" => Value::Function(builtins::MUL.with(|c| c.borrow().clone())),
+            "=" => Value::Function(builtins::EQ.with(|c| c.borrow().clone())),
             "\"" => Value::Function(builtins::QUOTE.with(|c| c.borrow().clone())),
             "list" => Value::Function(builtins::LIST.with(|c| c.borrow().clone())),
             "eval" => Value::Function(builtins::EVAL.with(|c| c.borrow().clone())),
+            "type" => Value::Function(builtins::TYPE.with(|c| c.borrow().clone())),
             _ => Value::error(vec![
                 Value::Identifier("UnresolvedIdentifier".to_string()),
                 syn.clone(),

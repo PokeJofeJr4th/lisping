@@ -4,4 +4,4 @@ list
 ((\ x (+ x 2)) 10)
 (list 1 2 (+ 4 (\ x (+ x 2))) '(1 2 3 4))
 `(1 2 3 4 ~(+ 2 3) 6)
-(eval ((\ x `(+ ~x 2)) 4))
+(eval ((\ x (if (= (type x) 'int) `(+ ~x 1) (err NotANumber x))) 4))

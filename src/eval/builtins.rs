@@ -9,6 +9,8 @@ thread_local! {
     pub static QUOTE: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(quote));
     pub static LIST: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(Value::Array));
     pub static EVAL: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(eval));
+    pub static EQ: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(eq));
+    pub static TYPE: RefCell<Rc<dyn Fn(Vec<Value>) -> Value>> = RefCell::new(Rc::new(typ));
 }
 
 pub fn add(args: Vec<Value>) -> Value {
@@ -43,6 +45,29 @@ pub fn mul(args: Vec<Value>) -> Value {
         product *= i;
     }
     Value::Int(product)
+}
+
+#[allow(clippy::needless_pass_by_value)]
+pub fn eq(args: Vec<Value>) -> Value {
+    if args.len() <= 1 || args.iter().skip(1).all(|x| x == &args[0]) {
+        Value::Identifier("true".to_string())
+    } else {
+        Value::Identifier("false".to_string())
+    }
+}
+
+pub fn typ(mut args: Vec<Value>) -> Value {
+    if args.len() != 1 {
+        args.insert(0, Value::Identifier("TooManyArgs".to_string()));
+        return Value::error(args);
+    }
+    match &args[0] {
+        Value::Int(_) => Value::Identifier("int".to_string()),
+        Value::String(_) => Value::Identifier("string".to_string()),
+        Value::Identifier(_) => Value::Identifier("identifier".to_string()),
+        Value::Array(_) => Value::Identifier("array".to_string()),
+        Value::Function(_) => Value::Identifier("function".to_string()),
+    }
 }
 
 pub fn quote(args: Vec<Value>) -> Value {
