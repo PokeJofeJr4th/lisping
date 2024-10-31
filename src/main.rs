@@ -4,7 +4,8 @@ use std::{fs, path::PathBuf};
 use clap::Parser;
 use eval::Value;
 
-mod eval;
+pub mod env;
+pub mod eval;
 pub mod line_count;
 pub mod parser;
 
@@ -19,6 +20,6 @@ fn main() {
     let src = fs::read_to_string(&args.src).unwrap();
     let code = parser::parse(&src).unwrap();
     // println!("{code:?}");
-    let result = eval::eval(&Value::Array(code));
+    let result = eval::eval(Value::List(code), env::default_env());
     println!("{result:?}");
 }
