@@ -1,9 +1,10 @@
 use std::{
     fmt::{Debug, Display},
+    iter,
     rc::Rc,
 };
 
-use crate::env::Env;
+use crate::env::{new_env, Env};
 
 pub mod builtins;
 
@@ -50,7 +51,7 @@ impl Value {
     }
 
     #[must_use]
-    pub fn is_identifier(&self, id: &str) -> bool {
+    pub fn is_symbol(&self, id: &str) -> bool {
         let Self::Symbol(my_id) = self else {
             return false;
         };
@@ -58,9 +59,11 @@ impl Value {
     }
 
     #[must_use]
-    pub fn error(mut msg: Vec<Self>) -> Self {
-        msg.insert(0, Self::Symbol("err".to_string()));
-        Self::List(msg)
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn error(msg: impl ToString, mut args: Vec<Self>) -> Self {
+        args.insert(0, Self::Symbol(msg.to_string()));
+        args.insert(0, Self::Symbol("err".to_string()));
+        Self::List(args)
     }
 
     #[must_use]
@@ -70,7 +73,7 @@ impl Value {
                 other.clone()
             }
             Self::List(vec) => {
-                if vec.first().is_some_and(|val| val.is_identifier("unquote")) {
+                if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
                     eval(vec[1].clone(), env)
                 } else {
                     Self::List(
@@ -93,6 +96,11 @@ impl Value {
             Self::Function(_) => true,
         }
     }
+
+    #[must_use]
+    pub fn nil() -> Self {
+        Self::Symbol("nil".to_string())
+    }
 }
 
 impl Display for Value {
@@ -112,7 +120,7 @@ impl Display for Value {
                 }
                 write!(f, ")")
             }
-            Self::Function(_) => f.debug_struct("Function").finish_non_exhaustive(),
+            Self::Function(_) => write!(f, "#<function>"),
         }
     }
 }
@@ -144,12 +152,9 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                 if arr.is_empty() {
                     return Value::List(Vec::new());
                 }
-                if let Some(args) = arr[0].as_function("\\") {
-                    let [param, body] = args else {
-                        return Value::error(vec![
-                            Value::Symbol("InvalidLambdaError".to_string()),
-                            arr[0].clone(),
-                        ]);
+                if arr[0].is_symbol("\\") {
+                    let [param, body] = &arr[1..] else {
+                        return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
                     };
                     let param_ids = match param {
                         Value::Symbol(id) => {
@@ -159,33 +164,39 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                             let mut ids = Vec::new();
                             for id in param_ids {
                                 let Value::Symbol(id) = id else {
-                                    return Value::error(vec![
-                                        Value::Symbol("InvalidLambdaError".to_string()),
-                                        arr[0].clone(),
-                                    ]);
+                                    return Value::error(
+                                        "InvalidLambdaError",
+                                        vec![arr[0].clone()],
+                                    );
                                 };
                                 ids.push(id.clone());
                             }
                             ids
                         }
-                        _ => {
-                            return Value::error(vec![
-                                Value::Symbol("InvalidLambdaError".to_string()),
-                                arr[0].clone(),
-                            ])
-                        }
+                        _ => return Value::error("InvalidLambdaError", vec![arr[0].clone()]),
                     };
                     if arr.len() - 1 < param_ids.len() {
-                        return Value::error(vec![
-                            Value::Symbol("InvalidLambdaError".to_string()),
-                            arr[0].clone(),
-                        ]);
+                        return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
                     }
-                    let mut body = body.clone();
-                    todo!("Create a new env and insert all the parameters");
-                    // body.replace_quoted(&param_ids, &arr[1..]);
-                    syn = body;
-                } else if arr[0].is_identifier("if") {
+                    let body = body.clone();
+                    let sub_env = new_env(env);
+                    return Value::Function(Rc::new(move |values, _| {
+                        let env = new_env(sub_env.clone());
+                        if values.len() > param_ids.len() {
+                            return Value::error("InvalidArgs", vec![Value::List(values)]);
+                        };
+                        let mut env_borrow = env.borrow_mut();
+                        for (value, param) in values
+                            .into_iter()
+                            .chain(iter::from_fn(|| Some(Value::nil())))
+                            .zip(&param_ids)
+                        {
+                            env_borrow.set(param, value);
+                        }
+                        drop(env_borrow);
+                        eval(body.clone(), env)
+                    }));
+                } else if arr[0].is_symbol("if") {
                     match &arr[1..] {
                         [cond, t] => {
                             if eval(cond.clone(), env.clone()).is_truthy() {
@@ -201,21 +212,13 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                                 syn = f.clone();
                             }
                         }
-                        _ => {
-                            return Value::error(vec![
-                                Value::Symbol("InvalidArgs".to_string()),
-                                syn.clone(),
-                            ])
-                        }
+                        _ => return Value::error("InvalidArgs", vec![syn.clone()]),
                     }
-                } else if arr[0].is_identifier("quote") {
+                } else if arr[0].is_symbol("quote") {
                     return arr[1].clone();
-                } else if arr[0].is_identifier("quasiquote") {
+                } else if arr[0].is_symbol("quasiquote") {
                     return arr[1].quasiquote(env);
-                } else if arr[0].is_identifier("\\") {
-                    // if it is a function, return itself
-                    return Value::List(arr.clone());
-                } else if arr[0].is_identifier("err") {
+                } else if arr[0].is_symbol("err") {
                     // if it is an error, evaluate everything but the first and return itself
                     return Value::List(
                         // start with the first value unchanged
@@ -238,12 +241,7 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                                 env,
                             )
                         }
-                        other => {
-                            return Value::error(vec![
-                                Value::Symbol("NotAFunction".to_string()),
-                                other,
-                            ])
-                        }
+                        other => return Value::error("NotAFunction", vec![other]),
                     }
                 }
             }
@@ -252,12 +250,7 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
             }
             Value::Symbol(ref id) => match env.borrow().get(id) {
                 Some(x) => return x,
-                None => {
-                    return Value::error(vec![
-                        Value::Symbol("UnresolvedIdentifier".to_string()),
-                        syn.clone(),
-                    ])
-                }
+                None => return Value::error("UnresolvedIdentifier", vec![syn.clone()]),
             },
             other => return other,
         }
