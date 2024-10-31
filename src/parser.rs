@@ -77,7 +77,7 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
                         id_buffer.push(*c);
                         chars.next();
                     }
-                    break 'inner Value::Symbol(id_buffer);
+                    break 'inner Value::symbol(&id_buffer);
                 }
             }
             break 'main;
@@ -85,18 +85,15 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
         let next_thing = match states.last() {
             Some(ParserState::Quote) => {
                 states.pop();
-                Value::List(vec![Value::Symbol("quote".to_string()), next_thing])
+                Value::List(vec![Value::symbol("quote"), next_thing])
             }
             Some(ParserState::QuasiQuote) => {
                 states.pop();
-                Value::List(vec![
-                    Value::Symbol("quasiquote".to_string()),
-                    next_thing,
-                ])
+                Value::List(vec![Value::symbol("quasiquote"), next_thing])
             }
             Some(ParserState::Unquote) => {
                 states.pop();
-                Value::List(vec![Value::Symbol("unquote".to_string()), next_thing])
+                Value::List(vec![Value::symbol("unquote"), next_thing])
             }
             _ => next_thing,
         };

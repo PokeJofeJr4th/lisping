@@ -33,6 +33,11 @@ pub enum Value {
     ///
     /// Evaluates to itself?
     Function(Rc<DynFn>),
+    Lambda {
+        args: Vec<String>,
+        body: Box<Value>,
+        captures: Env,
+    },
 }
 
 impl Value {
@@ -60,18 +65,20 @@ impl Value {
 
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
-    pub fn error(msg: impl ToString, mut args: Vec<Self>) -> Self {
-        args.insert(0, Self::Symbol(msg.to_string()));
-        args.insert(0, Self::Symbol("err".to_string()));
+    pub fn error(msg: &str, mut args: Vec<Self>) -> Self {
+        args.insert(0, Self::symbol(msg));
+        args.insert(0, Self::symbol("err"));
         Self::List(args)
     }
 
     #[must_use]
     pub fn quasiquote(&self, env: Env) -> Self {
         match self {
-            other @ (Self::Int(_) | Self::String(_) | Self::Symbol(_) | Self::Function(_)) => {
-                other.clone()
-            }
+            other @ (Self::Int(_)
+            | Self::String(_)
+            | Self::Symbol(_)
+            | Self::Function(_)
+            | Self::Lambda { .. }) => other.clone(),
             Self::List(vec) => {
                 if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
                     eval(vec[1].clone(), env)
@@ -93,13 +100,17 @@ impl Value {
             Self::String(s) => !s.is_empty(),
             Self::Symbol(i) => i == "true",
             Self::List(vec) => !vec.is_empty(),
-            Self::Function(_) => true,
+            Self::Function(_) | Self::Lambda { .. } => true,
         }
     }
 
     #[must_use]
     pub fn nil() -> Self {
-        Self::Symbol("nil".to_string())
+        Self::symbol("nil")
+    }
+
+    pub fn symbol(sym: &str) -> Self {
+        Self::Symbol(sym.to_string())
     }
 }
 
@@ -121,6 +132,21 @@ impl Display for Value {
                 write!(f, ")")
             }
             Self::Function(_) => write!(f, "#<function>"),
+            Self::Lambda {
+                args,
+                body,
+                captures: _,
+            } => {
+                write!(f, "(\\ (")?;
+                for (i, arg) in args.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{arg}")?;
+                    } else {
+                        write!(f, " {arg}")?;
+                    }
+                }
+                write!(f, ") {body})")
+            }
         }
     }
 }
@@ -202,7 +228,7 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                             if eval(cond.clone(), env.clone()).is_truthy() {
                                 syn = t.clone();
                             } else {
-                                return Value::Symbol("nil".to_string());
+                                return Value::symbol("nil");
                             }
                         }
                         [cond, t, f] => {

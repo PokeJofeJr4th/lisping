@@ -53,9 +53,9 @@ pub fn div(args: Vec<Value>, _env: Env) -> Value {
 #[allow(clippy::needless_pass_by_value)]
 pub fn eq(args: Vec<Value>, _env: Env) -> Value {
     if args.len() <= 1 || args.iter().skip(1).all(|x| x == &args[0]) {
-        Value::Symbol("true".to_string())
+        Value::symbol("true")
     } else {
-        Value::Symbol("false".to_string())
+        Value::symbol("false")
     }
 }
 
@@ -64,15 +64,14 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
         return Value::error("InvalidArgs", args);
     }
     match &args[0] {
-        Value::Int(_) => Value::Symbol("int".to_string()),
+        Value::Int(_) => Value::symbol("int"),
         Value::Symbol(s) => match &**s {
-            "\\" => Value::Symbol("function".to_string()),
-            "err" => Value::Symbol("err".to_string()),
-            _ => Value::Symbol("symbol".to_string()),
+            "err" => Value::symbol("err"),
+            _ => Value::symbol("symbol"),
         },
-        Value::String(_) => Value::Symbol("string".to_string()),
-        Value::List(_) => Value::Symbol("list".to_string()),
-        Value::Function(_) => Value::Symbol("function".to_string()),
+        Value::String(_) => Value::symbol("string"),
+        Value::List(_) => Value::symbol("list"),
+        Value::Function(_) | Value::Lambda { .. } => Value::symbol("function"),
     }
 }
 
@@ -80,9 +79,9 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
 pub fn type_is(type_is: &'static str) -> Rc<DynFn> {
     Rc::new(|args, env| {
         if typ(args, env).is_symbol(type_is) {
-            Value::Symbol("true".to_string())
+            Value::symbol("true")
         } else {
-            Value::Symbol("false".to_string())
+            Value::symbol("false")
         }
     })
 }
@@ -101,6 +100,7 @@ pub fn quote(args: Vec<Value>, _env: Env) -> Value {
             Value::List(values) => args.extend(values),
             Value::Function(_) => todo!(),
             Value::Symbol(_) => todo!(),
+            Value::Lambda { .. } => todo!(),
         }
     }
     Value::String(str)
