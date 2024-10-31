@@ -10,34 +10,31 @@ pub mod builtins;
 pub type DynFn = dyn Fn(Vec<Value>, Env) -> Value;
 
 #[derive(Clone)]
+/// A value in the lisp. This includes source code and runtime data.
 pub enum Value {
+    /// An int literal or value
+    ///
+    /// Evaluates to itself
     Int(i32),
+    /// A string literal or value
+    ///
+    /// Evaluates to itself
     String(String),
+    /// A symbol or identifier
+    ///
+    /// Keywords evaluate to constants or themself.
     Symbol(String),
+    /// A list of values
+    ///
+    /// Attempts to evaluate as a function invocation. Special forms may apply
     List(Vec<Value>),
+    /// A builtin function
+    ///
+    /// Evaluates to itself?
     Function(Rc<DynFn>),
 }
 
 impl Value {
-    pub fn replace(&mut self, id: &[impl AsRef<str>], value: &[Self]) {
-        match self {
-            Self::Symbol(mid) => {
-                for (id, value) in id.iter().zip(value) {
-                    if mid == id.as_ref() {
-                        *self = value.clone();
-                        return;
-                    }
-                }
-            }
-            Self::List(arr) => {
-                for s in arr {
-                    s.replace(id, value);
-                }
-            }
-            _ => {}
-        }
-    }
-
     #[must_use]
     pub fn as_function(&self, func: &str) -> Option<&[Self]> {
         let Self::List(arr) = self else {
@@ -185,7 +182,8 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                         ]);
                     }
                     let mut body = body.clone();
-                    body.replace(&param_ids, &arr[1..]);
+                    todo!("Create a new env and insert all the parameters");
+                    // body.replace_quoted(&param_ids, &arr[1..]);
                     syn = body;
                 } else if arr[0].is_identifier("if") {
                     match &arr[1..] {
@@ -205,7 +203,7 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                         }
                         _ => {
                             return Value::error(vec![
-                                Value::Symbol("TooManyArgs".to_string()),
+                                Value::Symbol("InvalidArgs".to_string()),
                                 syn.clone(),
                             ])
                         }
