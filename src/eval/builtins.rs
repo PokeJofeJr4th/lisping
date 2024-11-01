@@ -1,5 +1,5 @@
 #![allow(clippy::needless_pass_by_value)]
-use std::{collections::VecDeque, rc::Rc};
+use std::rc::Rc;
 
 use crate::env::Env;
 
@@ -59,6 +59,17 @@ pub fn eq(args: Vec<Value>, _env: Env) -> Value {
     }
 }
 
+pub fn not(args: Vec<Value>, _env: Env) -> Value {
+    let [x] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    if x.is_truthy() {
+        Value::symbol("false")
+    } else {
+        Value::symbol("true")
+    }
+}
+
 pub fn typ(args: Vec<Value>, _env: Env) -> Value {
     if args.len() != 1 {
         return Value::error("InvalidArgs", args);
@@ -86,24 +97,40 @@ pub fn type_is(type_is: &'static str) -> Rc<DynFn> {
     })
 }
 
-pub fn quote(args: Vec<Value>, _env: Env) -> Value {
+pub fn str(args: Vec<Value>, _env: Env) -> Value {
     let mut str = String::new();
-    let mut args = VecDeque::from(args);
-    while let Some(arg) = args.pop_front() {
-        match arg {
-            #[allow(clippy::cast_sign_loss)]
-            Value::Int(i) => match char::try_from(i as u32) {
-                Ok(c) => str.push(c),
-                Err(_) => return Value::error("NotACharacter", vec![Value::Int(i)]),
-            },
-            Value::String(s) => str.push_str(&s),
-            Value::List(values) => args.extend(values),
-            Value::Function(_) => todo!(),
-            Value::Symbol(_) => todo!(),
-            Value::Lambda { .. } => todo!(),
-        }
+    for arg in args {
+        str.push_str(&format!("{arg}"));
     }
     Value::String(str)
+}
+
+pub fn chr(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let Value::Int(i) = args.remove(0) else {
+        return Value::error("InvalidArgs", args);
+    };
+    char::try_from(i as u32).map_or_else(
+        |_| Value::error("InvalidChar", vec![Value::Int(i)]),
+        |c| Value::String(c.to_string()),
+    )
+}
+
+pub fn map(mut args: Vec<Value>, env: Env) -> Value {
+    if args.len() != 2 {
+        return Value::error("InvalidArgs", args);
+    }
+    let func = args.remove(0);
+    let Value::List(l) = args.remove(0) else {
+        return Value::error("InvalidArgs", args);
+    };
+    Value::List(
+        l.into_iter()
+            .map(|v| super::eval(Value::List(vec![func.clone(), v]), env.clone()))
+            .collect(),
+    )
 }
 
 #[allow(clippy::needless_pass_by_value)]

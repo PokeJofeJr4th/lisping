@@ -41,12 +41,15 @@ pub fn default_env() -> Env {
     data.insert("*".to_string(), Value::Function(Rc::new(builtins::mul)));
     data.insert("/".to_string(), Value::Function(Rc::new(builtins::div)));
     data.insert("=".to_string(), Value::Function(Rc::new(builtins::eq)));
-    data.insert("\"".to_string(), Value::Function(Rc::new(builtins::quote)));
     data.insert(
         "list".to_string(),
         Value::Function(Rc::new(|v, _| Value::List(v))),
     );
+    data.insert("not".to_string(), Value::Function(Rc::new(builtins::not)));
     data.insert("eval".to_string(), Value::Function(Rc::new(builtins::eval)));
+    data.insert("str".to_string(), Value::Function(Rc::new(builtins::str)));
+    data.insert("chr".to_string(), Value::Function(Rc::new(builtins::chr)));
+    data.insert("map".to_string(), Value::Function(Rc::new(builtins::map)));
     data.insert("type".to_string(), Value::Function(Rc::new(builtins::typ)));
     data.insert(
         "err?".to_string(),

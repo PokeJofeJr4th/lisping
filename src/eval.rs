@@ -1,6 +1,5 @@
 use std::{
     fmt::{Debug, Display},
-    iter,
     rc::Rc,
 };
 
@@ -96,11 +95,8 @@ impl Value {
     #[must_use]
     pub fn is_truthy(&self) -> bool {
         match self {
-            Self::Int(i) => *i > 0,
-            Self::String(s) => !s.is_empty(),
-            Self::Symbol(i) => i == "true",
-            Self::List(vec) => !vec.is_empty(),
-            Self::Function(_) | Self::Lambda { .. } => true,
+            Self::Symbol(i) => i != "false" && i != "nil",
+            _ => true,
         }
     }
 
@@ -109,6 +105,7 @@ impl Value {
         Self::symbol("nil")
     }
 
+    #[must_use]
     pub fn symbol(sym: &str) -> Self {
         Self::Symbol(sym.to_string())
     }
@@ -118,8 +115,7 @@ impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Int(arg0) => write!(f, "{arg0}"),
-            Self::String(arg0) => write!(f, "{arg0:?}"),
-            Self::Symbol(arg0) => write!(f, "{arg0}"),
+            Self::String(arg0) | Self::Symbol(arg0) => write!(f, "{arg0}"),
             Self::List(arg0) => {
                 write!(f, "(")?;
                 for (i, v) in arg0.iter().enumerate() {
@@ -131,29 +127,30 @@ impl Display for Value {
                 }
                 write!(f, ")")
             }
-            Self::Function(_) => write!(f, "#<function>"),
-            Self::Lambda {
-                args,
-                body,
-                captures: _,
-            } => {
-                write!(f, "(\\ (")?;
-                for (i, arg) in args.iter().enumerate() {
-                    if i == 0 {
-                        write!(f, "{arg}")?;
-                    } else {
-                        write!(f, " {arg}")?;
-                    }
-                }
-                write!(f, ") {body})")
-            }
+            Self::Function(_) | Self::Lambda { .. } => write!(f, "#<function>"),
         }
     }
 }
 
 impl Debug for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self}")
+        match self {
+            Self::Int(arg0) => write!(f, "{arg0}"),
+            Self::String(arg0) => write!(f, "{arg0:?}"),
+            Self::Symbol(arg0) => write!(f, "{arg0}"),
+            Self::List(arg0) => {
+                write!(f, "(")?;
+                for (i, v) in arg0.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{v:?}")?;
+                    } else {
+                        write!(f, " {v:?}")?;
+                    }
+                }
+                write!(f, ")")
+            }
+            Self::Function(_) | Self::Lambda { .. } => write!(f, "#<function>"),
+        }
     }
 }
 
@@ -171,7 +168,7 @@ impl PartialEq for Value {
 
 /// syntax => value
 #[allow(clippy::too_many_lines)]
-pub fn eval(mut syn: Value, env: Env) -> Value {
+pub fn eval(mut syn: Value, mut env: Env) -> Value {
     loop {
         match syn {
             Value::List(ref arr) => {
@@ -182,46 +179,23 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                     let [param, body] = &arr[1..] else {
                         return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
                     };
-                    let param_ids = match param {
-                        Value::Symbol(id) => {
-                            vec![id.clone()]
-                        }
-                        Value::List(param_ids) => {
-                            let mut ids = Vec::new();
-                            for id in param_ids {
-                                let Value::Symbol(id) = id else {
-                                    return Value::error(
-                                        "InvalidLambdaError",
-                                        vec![arr[0].clone()],
-                                    );
-                                };
-                                ids.push(id.clone());
-                            }
-                            ids
-                        }
-                        _ => return Value::error("InvalidLambdaError", vec![arr[0].clone()]),
-                    };
-                    if arr.len() - 1 < param_ids.len() {
+                    let Value::List(ids) = param else {
                         return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
+                    };
+                    let mut param_ids = Vec::new();
+                    for id in ids {
+                        let Value::Symbol(id) = id else {
+                            return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
+                        };
+                        param_ids.push(id.clone());
                     }
                     let body = body.clone();
                     let sub_env = new_env(env);
-                    return Value::Function(Rc::new(move |values, _| {
-                        let env = new_env(sub_env.clone());
-                        if values.len() > param_ids.len() {
-                            return Value::error("InvalidArgs", vec![Value::List(values)]);
-                        };
-                        let mut env_borrow = env.borrow_mut();
-                        for (value, param) in values
-                            .into_iter()
-                            .chain(iter::from_fn(|| Some(Value::nil())))
-                            .zip(&param_ids)
-                        {
-                            env_borrow.set(param, value);
-                        }
-                        drop(env_borrow);
-                        eval(body.clone(), env)
-                    }));
+                    return Value::Lambda {
+                        args: param_ids,
+                        body: Box::new(body),
+                        captures: sub_env,
+                    };
                 } else if arr[0].is_symbol("if") {
                     match &arr[1..] {
                         [cond, t] => {
@@ -248,8 +222,8 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                     // if it is an error, evaluate everything but the first and return itself
                     return Value::List(
                         // start with the first value unchanged
-                        arr.get(1)
-                            .into_iter()
+                        arr.iter()
+                            .take(2)
                             .cloned()
                             // evaluate everything but the first if they exist
                             .chain(arr.iter().skip(2).map(|arg| eval(arg.clone(), env.clone())))
@@ -266,6 +240,25 @@ pub fn eval(mut syn: Value, env: Env) -> Value {
                                     .collect(),
                                 env,
                             )
+                        }
+                        Value::Lambda {
+                            args: params,
+                            body,
+                            captures,
+                        } => {
+                            let args: Vec<_> = arr
+                                .iter()
+                                .skip(1)
+                                .cloned()
+                                .map(|v| eval(v, env.clone()))
+                                .collect();
+                            env = new_env(captures);
+                            syn = *body;
+                            let mut env_borrow = env.borrow_mut();
+                            for (param, arg) in params.into_iter().zip(args) {
+                                env_borrow.set(&param, arg);
+                            }
+                            drop(env_borrow);
                         }
                         other => return Value::error("NotAFunction", vec![other]),
                     }
