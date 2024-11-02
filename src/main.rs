@@ -13,6 +13,8 @@ pub mod parser;
 struct Args {
     /// The source file to run
     src: PathBuf,
+    /// The arguments to pass to the program
+    args: Vec<String>,
 }
 
 fn main() {
@@ -20,6 +22,7 @@ fn main() {
     let src = fs::read_to_string(&args.src).unwrap();
     let code = parser::parse(&src).unwrap();
     // println!("{code:?}");
-    let result = eval::eval(Value::List(code), env::default_env());
+    let args = args.args.into_iter().map(Value::String).collect();
+    let result = eval::eval(Value::List(code), env::default_env(args));
     println!("{result:?}");
 }

@@ -167,6 +167,8 @@ impl PartialEq for Value {
 }
 
 /// syntax => value
+/// # Panics
+/// Whenever :3
 #[allow(clippy::too_many_lines)]
 pub fn eval(mut syn: Value, mut env: Env) -> Value {
     loop {
@@ -229,6 +231,37 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                             .chain(arr.iter().skip(2).map(|arg| eval(arg.clone(), env.clone())))
                             .collect(),
                     );
+                } else if arr[0].is_symbol("let*") {
+                    if arr.len() != 3 {
+                        return Value::error("InvalidArgs", arr.clone());
+                    }
+                    env = new_env(env);
+                    let Value::List(assigns) = &arr[1] else {
+                        return Value::error("InvalidArgs", arr.clone());
+                    };
+                    for i in 0..(assigns.len() / 2) {
+                        let Value::Symbol(id) = &assigns[2 * i] else {
+                            return Value::error("InvalidArgs", arr.clone());
+                        };
+                        let result = eval(assigns[2 * i + 1].clone(), env.clone());
+                        env.borrow_mut().set(id, result);
+                    }
+                    syn = arr[2].clone();
+                } else if arr[0].is_symbol("def!") {
+                    if arr.len() != 3 {
+                        return Value::error("InvalidArgs", arr.clone());
+                    }
+                    let Value::Symbol(i) = &arr[1] else {
+                        return Value::error("InvalidArgs", arr.clone());
+                    };
+                    let result = eval(arr[2].clone(), env.clone());
+                    env.borrow_mut().set(i, result);
+                    return Value::nil();
+                } else if arr[0].is_symbol("do") {
+                    for i in arr.iter().take(arr.len() - 1).skip(1) {
+                        eval(i.clone(), env.clone());
+                    }
+                    syn = arr.last().unwrap().clone();
                 } else {
                     match eval(arr[0].clone(), env.clone()) {
                         Value::Function(func) => {
@@ -264,8 +297,8 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                     }
                 }
             }
-            ref value @ Value::Symbol(ref id) if id == "true" || id == "false" || id == "nil" => {
-                return value.clone()
+            Value::Symbol(ref id) if id == "true" || id == "false" || id == "nil" => {
+                return syn.clone()
             }
             Value::Symbol(ref id) => match env.borrow().get(id) {
                 Some(x) => return x,

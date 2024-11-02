@@ -33,7 +33,7 @@ pub fn new_env(parent: Env) -> Env {
 }
 
 #[must_use]
-pub fn default_env() -> Env {
+pub fn default_env(args: Vec<Value>) -> Env {
     let mut data = HashMap::new();
 
     data.insert("+".to_string(), Value::Function(Rc::new(builtins::add)));
@@ -71,5 +71,6 @@ pub fn default_env() -> Env {
         "int?".to_string(),
         Value::Function(builtins::type_is("int")),
     );
+    data.insert("*ARGS*".to_string(), Value::List(args));
     Rc::new(RefCell::new(EnvData { parent: None, data }))
 }

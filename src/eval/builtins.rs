@@ -112,12 +112,14 @@ pub fn chr(mut args: Vec<Value>, _env: Env) -> Value {
     let Value::Int(i) = args.remove(0) else {
         return Value::error("InvalidArgs", args);
     };
+    #[allow(clippy::cast_sign_loss)]
     char::try_from(i as u32).map_or_else(
         |_| Value::error("InvalidChar", vec![Value::Int(i)]),
         |c| Value::String(c.to_string()),
     )
 }
 
+/// Apply a function to each value of a list
 pub fn map(mut args: Vec<Value>, env: Env) -> Value {
     if args.len() != 2 {
         return Value::error("InvalidArgs", args);
