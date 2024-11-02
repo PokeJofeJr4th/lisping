@@ -23,6 +23,6 @@ fn main() {
     let code = parser::parse(&src).unwrap();
     // println!("{code:?}");
     let args = args.args.into_iter().map(Value::String).collect();
-    let result = eval::eval(Value::List(code), env::default_env(args));
+    let result = eval::eval(Value::List(code.into()), env::default_env(args));
     println!("{result:?}");
 }

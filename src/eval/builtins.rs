@@ -41,7 +41,7 @@ pub fn mul(args: Vec<Value>, _env: Env) -> Value {
 
 pub fn div(args: Vec<Value>, _env: Env) -> Value {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", vec![Value::List(args)]);
+        return Value::error("InvalidArgs", vec![Value::List(args.into())]);
     };
     if *b == 0 {
         Value::error("DivideByZero", vec![])
@@ -129,10 +129,64 @@ pub fn map(mut args: Vec<Value>, env: Env) -> Value {
         return Value::error("InvalidArgs", args);
     };
     Value::List(
-        l.into_iter()
-            .map(|v| super::eval(Value::List(vec![func.clone(), v]), env.clone()))
+        l.iter()
+            .map(|v| {
+                super::eval(
+                    Value::List(vec![func.clone(), v.clone()].into()),
+                    env.clone(),
+                )
+            })
             .collect(),
     )
+}
+
+/// # Panics
+#[allow(clippy::cast_sign_loss)]
+pub fn nth(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 2 {
+        return Value::error("InvalidArgs", args);
+    }
+    let l = match args.remove(0) {
+        Value::List(l) => l,
+        o => return Value::error("NotAList", vec![o]),
+    };
+    let i = match args.remove(1) {
+        Value::Int(i) => i,
+        o => return Value::error("NotANumber", vec![o]),
+    };
+    if (i as usize) < l.len() {
+        Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])
+    } else {
+        l.get(i as usize).unwrap().clone()
+    }
+}
+
+pub fn first(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let arg = args.remove(0);
+    if arg.is_symbol("nil") {
+        arg
+    } else if let Value::List(l) = arg {
+        l.first().cloned().unwrap_or_else(Value::nil)
+    } else {
+        Value::error("NotAList", vec![arg])
+    }
+}
+
+pub fn rest(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let arg = args.remove(0);
+    if arg.is_symbol("nil") {
+        arg
+    } else if let Value::List(l) = arg {
+        Value::List(l[1..].to_vec().into())
+    } else {
+        Value::error("NotAList", vec![arg])
+    }
 }
 
 #[allow(clippy::needless_pass_by_value)]

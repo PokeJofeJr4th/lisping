@@ -33,7 +33,7 @@ pub fn new_env(parent: Env) -> Env {
 }
 
 #[must_use]
-pub fn default_env(args: Vec<Value>) -> Env {
+pub fn default_env(args: Rc<[Value]>) -> Env {
     let mut data = HashMap::new();
 
     data.insert("+".to_string(), Value::Function(Rc::new(builtins::add)));
@@ -43,7 +43,7 @@ pub fn default_env(args: Vec<Value>) -> Env {
     data.insert("=".to_string(), Value::Function(Rc::new(builtins::eq)));
     data.insert(
         "list".to_string(),
-        Value::Function(Rc::new(|v, _| Value::List(v))),
+        Value::Function(Rc::new(|v, _| Value::List(v.into()))),
     );
     data.insert("not".to_string(), Value::Function(Rc::new(builtins::not)));
     data.insert("eval".to_string(), Value::Function(Rc::new(builtins::eval)));
@@ -51,6 +51,12 @@ pub fn default_env(args: Vec<Value>) -> Env {
     data.insert("chr".to_string(), Value::Function(Rc::new(builtins::chr)));
     data.insert("map".to_string(), Value::Function(Rc::new(builtins::map)));
     data.insert("type".to_string(), Value::Function(Rc::new(builtins::typ)));
+    data.insert("nth".to_string(), Value::Function(Rc::new(builtins::nth)));
+    data.insert(
+        "first".to_string(),
+        Value::Function(Rc::new(builtins::first)),
+    );
+    data.insert("rest".to_string(), Value::Function(Rc::new(builtins::rest)));
     data.insert(
         "err?".to_string(),
         Value::Function(builtins::type_is("err")),

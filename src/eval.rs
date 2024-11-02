@@ -27,10 +27,10 @@ pub enum Value {
     /// A list of values
     ///
     /// Attempts to evaluate as a function invocation. Special forms may apply
-    List(Vec<Value>),
+    List(Rc<[Value]>),
     /// A builtin function
     ///
-    /// Evaluates to itself?
+    /// Evaluates to itself
     Function(Rc<DynFn>),
     Lambda {
         args: Vec<String>,
@@ -67,7 +67,7 @@ impl Value {
     pub fn error(msg: &str, mut args: Vec<Self>) -> Self {
         args.insert(0, Self::symbol(msg));
         args.insert(0, Self::symbol("err"));
-        Self::List(args)
+        Self::List(args.into())
     }
 
     #[must_use]
@@ -175,7 +175,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
         match syn {
             Value::List(ref arr) => {
                 if arr.is_empty() {
-                    return Value::List(Vec::new());
+                    return Value::List(Rc::new([]));
                 }
                 if arr[0].is_symbol("\\") {
                     let [param, body] = &arr[1..] else {
@@ -185,7 +185,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                         return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
                     };
                     let mut param_ids = Vec::new();
-                    for id in ids {
+                    for id in &**ids {
                         let Value::Symbol(id) = id else {
                             return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
                         };
@@ -233,15 +233,15 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                     );
                 } else if arr[0].is_symbol("let*") {
                     if arr.len() != 3 {
-                        return Value::error("InvalidArgs", arr.clone());
+                        return Value::error("InvalidArgs", arr.to_vec());
                     }
                     env = new_env(env);
                     let Value::List(assigns) = &arr[1] else {
-                        return Value::error("InvalidArgs", arr.clone());
+                        return Value::error("InvalidArgs", arr.to_vec());
                     };
                     for i in 0..(assigns.len() / 2) {
                         let Value::Symbol(id) = &assigns[2 * i] else {
-                            return Value::error("InvalidArgs", arr.clone());
+                            return Value::error("InvalidArgs", arr.to_vec());
                         };
                         let result = eval(assigns[2 * i + 1].clone(), env.clone());
                         env.borrow_mut().set(id, result);
@@ -249,10 +249,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                     syn = arr[2].clone();
                 } else if arr[0].is_symbol("def!") {
                     if arr.len() != 3 {
-                        return Value::error("InvalidArgs", arr.clone());
+                        return Value::error("InvalidArgs", arr.to_vec());
                     }
                     let Value::Symbol(i) = &arr[1] else {
-                        return Value::error("InvalidArgs", arr.clone());
+                        return Value::error("InvalidArgs", arr.to_vec());
                     };
                     let result = eval(arr[2].clone(), env.clone());
                     env.borrow_mut().set(i, result);
