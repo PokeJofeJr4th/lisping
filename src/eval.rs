@@ -31,11 +31,12 @@ pub enum Value {
     /// A builtin function
     ///
     /// Evaluates to itself
-    Function(Rc<DynFn>),
+    Function { fn_ref: Rc<DynFn>, is_macro: bool },
     Lambda {
         args: Vec<String>,
         body: Box<Value>,
         captures: Env,
+        is_macro: bool,
     },
 }
 
@@ -76,7 +77,7 @@ impl Value {
             other @ (Self::Int(_)
             | Self::String(_)
             | Self::Symbol(_)
-            | Self::Function(_)
+            | Self::Function { .. }
             | Self::Lambda { .. }) => other.clone(),
             Self::List(vec) => {
                 if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
@@ -109,6 +110,13 @@ impl Value {
     pub fn symbol(sym: &str) -> Self {
         Self::Symbol(sym.to_string())
     }
+
+    pub fn function(func: Rc<DynFn>) -> Self {
+        Self::Function {
+            fn_ref: func,
+            is_macro: false,
+        }
+    }
 }
 
 impl Display for Value {
@@ -127,7 +135,7 @@ impl Display for Value {
                 }
                 write!(f, ")")
             }
-            Self::Function(_) | Self::Lambda { .. } => write!(f, "#<function>"),
+            Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
         }
     }
 }
@@ -149,7 +157,7 @@ impl Debug for Value {
                 }
                 write!(f, ")")
             }
-            Self::Function(_) | Self::Lambda { .. } => write!(f, "#<function>"),
+            Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
         }
     }
 }
@@ -160,7 +168,16 @@ impl PartialEq for Value {
             (Self::Int(a), Self::Int(b)) => *a == *b,
             (Self::String(a), Self::String(b)) | (Self::Symbol(a), Self::Symbol(b)) => a == b,
             (Self::List(a), Self::List(b)) => a == b,
-            (Self::Function(a), Self::Function(b)) => core::ptr::eq(a.as_ref(), b.as_ref()),
+            (
+                Self::Function {
+                    fn_ref: a,
+                    is_macro: a_m,
+                },
+                Self::Function {
+                    fn_ref: b,
+                    is_macro: b_m,
+                },
+            ) => a_m == b_m && core::ptr::eq(a.as_ref(), b.as_ref()),
             _ => false,
         }
     }
@@ -197,6 +214,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                         args: param_ids,
                         body: Box::new(body),
                         captures: sub_env,
+                        is_macro: false,
                     };
                 } else if arr[0].is_symbol("if") {
                     match &arr[1..] {
@@ -264,7 +282,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                     syn = arr.last().unwrap().clone();
                 } else {
                     match eval(arr[0].clone(), env.clone()) {
-                        Value::Function(func) => {
+                        Value::Function {
+                            fn_ref: func,
+                            is_macro: false,
+                        } => {
                             return func(
                                 arr.iter()
                                     .skip(1)
@@ -274,10 +295,17 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                                 env,
                             )
                         }
+                        Value::Function {
+                            fn_ref: func,
+                            is_macro: true,
+                        } => {
+                            syn = func(arr[1..].into(), env.clone());
+                        }
                         Value::Lambda {
                             args: params,
                             body,
                             captures,
+                            is_macro: false,
                         } => {
                             let args: Vec<_> = arr
                                 .iter()
@@ -292,6 +320,20 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                                 env_borrow.set(&param, arg);
                             }
                             drop(env_borrow);
+                        }
+                        Value::Lambda {
+                            args: params,
+                            body,
+                            captures,
+                            is_macro: true,
+                        } => {
+                            let sub_env = new_env(captures);
+                            let mut sub_env_borrow = sub_env.borrow_mut();
+                            for (param, arg) in params.into_iter().zip(arr.iter().skip(1)) {
+                                sub_env_borrow.set(&param, arg.clone());
+                            }
+                            drop(sub_env_borrow);
+                            syn = eval(*body, sub_env);
                         }
                         other => return Value::error("NotAFunction", vec![other]),
                     }

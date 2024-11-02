@@ -82,7 +82,9 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
         },
         Value::String(_) => Value::symbol("string"),
         Value::List(_) => Value::symbol("list"),
-        Value::Function(_) | Value::Lambda { .. } => Value::symbol("function"),
+        Value::Function { is_macro, .. } | Value::Lambda { is_macro, .. } => {
+            Value::symbol(if *is_macro { "macro" } else { "function" })
+        }
     }
 }
 
@@ -199,5 +201,32 @@ pub fn eval(mut args: Vec<Value>, env: Env) -> Value {
                 .map(|v| super::eval(v, env.clone()))
                 .collect(),
         )
+    }
+}
+
+pub fn as_macro(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    match args.remove(0) {
+        Value::Function {
+            fn_ref,
+            is_macro: false,
+        } => Value::Function {
+            fn_ref,
+            is_macro: true,
+        },
+        Value::Lambda {
+            args,
+            body,
+            captures,
+            is_macro: false,
+        } => Value::Lambda {
+            args,
+            body,
+            captures,
+            is_macro: true,
+        },
+        other => Value::error("NotAFunction", vec![other]),
     }
 }
