@@ -10,7 +10,7 @@ enum ParserState {
 
 #[allow(clippy::too_many_lines)]
 /// # Errors
-pub fn parse(src: &str) -> Result<Vec<Value>, String> {
+pub fn parse(src: &str) -> Result<Value, String> {
     let mut chars = src.chars().line_count().peekable();
     // the stack of arrays at higher depths
     let mut parse_stack: Vec<Vec<Value>> = Vec::new();
@@ -100,7 +100,8 @@ pub fn parse(src: &str) -> Result<Vec<Value>, String> {
         current_array.push(next_thing);
     }
     if parse_stack.is_empty() {
-        Ok(current_array)
+        current_array.insert(0, Value::symbol("do"));
+        Ok(Value::List(current_array.into()))
     } else {
         Err("Unmatched opening parenthesis".to_string())
     }
