@@ -78,6 +78,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         Value::function(builtins::type_is("list")),
     );
     data.insert(
+        "table?".to_string(),
+        Value::function(builtins::type_is("table")),
+    );
+    data.insert(
         "symbol?".to_string(),
         Value::function(builtins::type_is("symbol")),
     );

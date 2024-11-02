@@ -82,6 +82,7 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
         },
         Value::String(_) => Value::symbol("string"),
         Value::List(_) => Value::symbol("list"),
+        Value::Table(_) => Value::symbol("table"),
         Value::Function { is_macro, .. } | Value::Lambda { is_macro, .. } => {
             Value::symbol(if *is_macro { "macro" } else { "function" })
         }

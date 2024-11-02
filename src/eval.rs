@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fmt::{Debug, Display},
     rc::Rc,
 };
@@ -28,10 +29,15 @@ pub enum Value {
     ///
     /// Attempts to evaluate as a function invocation. Special forms may apply
     List(Rc<[Value]>),
+    /// A key-value store
+    Table(Rc<HashMap<String, Value>>),
     /// A builtin function
     ///
     /// Evaluates to itself
     Function { fn_ref: Rc<DynFn>, is_macro: bool },
+    /// A function that captures variables from its environment
+    ///
+    /// Evaluates to itself
     Lambda {
         args: Vec<String>,
         body: Box<Value>,
@@ -78,6 +84,7 @@ impl Value {
             | Self::String(_)
             | Self::Symbol(_)
             | Self::Function { .. }
+            | Self::Table(_)
             | Self::Lambda { .. }) => other.clone(),
             Self::List(vec) => {
                 if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
@@ -135,6 +142,17 @@ impl Display for Value {
                 }
                 write!(f, ")")
             }
+            Self::Table(t) => {
+                write!(f, "{{")?;
+                for (i, (k, v)) in t.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{k} {v}")?;
+                    } else {
+                        write!(f, " {k} {v}")?;
+                    }
+                }
+                write!(f, "}}")
+            }
             Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
         }
     }
@@ -156,6 +174,17 @@ impl Debug for Value {
                     }
                 }
                 write!(f, ")")
+            }
+            Self::Table(t) => {
+                write!(f, "{{")?;
+                for (i, (k, v)) in t.iter().enumerate() {
+                    if i == 0 {
+                        write!(f, "{k:?}: {v:?}")?;
+                    } else {
+                        write!(f, ", {k:?}: {v:?}")?;
+                    }
+                }
+                write!(f, "}}")
             }
             Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
         }
