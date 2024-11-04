@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
+    hash::Hash,
     rc::Rc,
 };
 
@@ -30,7 +31,9 @@ pub enum Value {
     /// Attempts to evaluate as a function invocation. Special forms may apply
     List(Rc<[Value]>),
     /// A key-value store
-    Table(Rc<HashMap<String, Value>>),
+    ///
+    /// Evaluates each key and value
+    Table(Rc<HashMap<Value, Value>>),
     /// A builtin function
     ///
     /// Evaluates to itself
@@ -212,6 +215,45 @@ impl PartialEq for Value {
     }
 }
 
+impl Eq for Value {}
+
+impl Hash for Value {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+        match &self {
+            Self::Function { fn_ref, is_macro } => {
+                core::ptr::from_ref(&**fn_ref).hash(state);
+                is_macro.hash(state);
+            }
+            Self::Int(i) => {
+                i.hash(state);
+            }
+            Self::Lambda {
+                args,
+                body,
+                captures: _,
+                is_macro,
+            } => {
+                args.hash(state);
+                body.hash(state);
+                is_macro.hash(state);
+            }
+            Self::List(l) => {
+                l.hash(state);
+            }
+            Self::String(s) | Self::Symbol(s) => {
+                s.hash(state);
+            }
+            Self::Table(t) => {
+                for (k, v) in &**t {
+                    k.hash(state);
+                    v.hash(state);
+                }
+            }
+        }
+    }
+}
+
 /// syntax => value
 /// # Panics
 /// Whenever :3
@@ -375,6 +417,14 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                 Some(x) => return x,
                 None => return Value::error("UnresolvedIdentifier", vec![syn.clone()]),
             },
+            Value::Table(table) => {
+                let mut t = HashMap::new();
+                for (k, v) in &*table {
+                    let v = eval(v.clone(), env.clone());
+                    t.insert(k.clone(), v);
+                }
+                return Value::Table(Rc::new(t));
+            }
             other => return other,
         }
     }
