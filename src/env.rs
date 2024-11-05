@@ -54,13 +54,18 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert("str".to_string(), Value::function(Rc::new(builtins::str)));
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
     data.insert("map".to_string(), Value::function(Rc::new(builtins::map)));
-    data.insert("type".to_string(), Value::function(Rc::new(builtins::typ)));
+    data.insert("nth".to_string(), Value::function(Rc::new(builtins::nth)));
+    data.insert(
+        "assoc".to_string(),
+        Value::function(Rc::new(builtins::assoc)),
+    );
     data.insert("nth".to_string(), Value::function(Rc::new(builtins::nth)));
     data.insert(
         "first".to_string(),
         Value::function(Rc::new(builtins::first)),
     );
     data.insert("rest".to_string(), Value::function(Rc::new(builtins::rest)));
+    data.insert("type".to_string(), Value::function(Rc::new(builtins::typ)));
     data.insert(
         "err?".to_string(),
         Value::function(builtins::type_is("err")),

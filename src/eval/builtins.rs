@@ -1,5 +1,5 @@
 #![allow(clippy::needless_pass_by_value)]
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::env::Env;
 
@@ -230,4 +230,38 @@ pub fn as_macro(mut args: Vec<Value>, _env: Env) -> Value {
         },
         other => Value::error("NotAFunction", vec![other]),
     }
+}
+
+pub fn assoc(args: Vec<Value>, _env: Env) -> Value {
+    if args.len() % 2 == 0 {
+        return Value::error("InvalidArgs", args);
+    }
+    let mut args = args.into_iter();
+    let table = match args.next() {
+        Some(Value::Table(t)) => t,
+        Some(other) => return Value::error("NotATable", vec![other]),
+        None => unreachable!(),
+    };
+    let mut table: HashMap<_, _> = (*table).clone();
+    while let (Some(k), Some(v)) = (args.next(), args.next()) {
+        table.insert(k, v);
+    }
+    Value::Table(Rc::new(table))
+}
+
+pub fn dissoc(args: Vec<Value>, _env: Env) -> Value {
+    if args.len() <= 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let mut args = args.into_iter();
+    let table = match args.next() {
+        Some(Value::Table(t)) => t,
+        Some(other) => return Value::error("NotATable", vec![other]),
+        None => unreachable!(),
+    };
+    let mut table: HashMap<_, _> = (*table).clone();
+    for k in args {
+        table.remove(&k);
+    }
+    Value::Table(Rc::new(table))
 }
