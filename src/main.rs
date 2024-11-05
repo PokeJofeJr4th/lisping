@@ -33,19 +33,24 @@ fn main() {
         println!("{result:?}");
     } else {
         let env = env::default_env(Rc::new([]));
+        let mut code = Value::nil();
         loop {
             print!("> ");
             stdout().flush().unwrap();
             let mut s = String::new();
             stdin().read_line(&mut s).unwrap();
-            let code = match parser::parse(&s) {
-                Ok(c) => c,
-                Err(e) => {
-                    println!("Parse error: {e}");
-                    continue;
+            if !s.is_empty() {
+                match parser::parse(&s) {
+                    Ok(c) => {
+                        code = c;
+                    }
+                    Err(e) => {
+                        println!("Parse error: {e}");
+                        continue;
+                    }
                 }
             };
-            let result = eval::eval(code, env.clone());
+            let result = eval::eval(code.clone(), env.clone());
             println!("{result:?}");
             env.borrow_mut().set("_", result);
         }
