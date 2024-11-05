@@ -265,3 +265,31 @@ pub fn dissoc(args: Vec<Value>, _env: Env) -> Value {
     }
     Value::Table(Rc::new(table))
 }
+
+pub fn get(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Table(t), k] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    t.get(k).cloned().unwrap_or_else(Value::nil)
+}
+
+pub fn keys(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Table(t)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    Value::List(t.keys().cloned().collect::<Vec<_>>().into())
+}
+
+pub fn values(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Table(t)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    Value::List(t.values().cloned().collect::<Vec<_>>().into())
+}
+
+pub fn contains(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Table(t), k] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    Value::symbol(if t.contains_key(k) { "true" } else { "false" })
+}
