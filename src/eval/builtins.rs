@@ -1,5 +1,8 @@
 #![allow(clippy::needless_pass_by_value)]
+use std::io::stdin;
 use std::{collections::HashMap, rc::Rc};
+
+use regex::Regex;
 
 use crate::env::Env;
 
@@ -68,6 +71,24 @@ pub fn not(args: Vec<Value>, _env: Env) -> Value {
     } else {
         Value::symbol("true")
     }
+}
+
+pub fn print(args: Vec<Value>, _env: Env) -> Value {
+    for (i, val) in args.into_iter().enumerate() {
+        if i == 0 {
+            print!("{val}");
+        } else {
+            print!(" {val}");
+        }
+    }
+    println!();
+    Value::nil()
+}
+
+pub fn input(args: Vec<Value>, _env: Env) -> Value {
+    let mut buf = String::new();
+    stdin().read_line(&mut buf).unwrap();
+    Value::String(buf)
 }
 
 pub fn typ(args: Vec<Value>, _env: Env) -> Value {
@@ -292,4 +313,25 @@ pub fn contains(args: Vec<Value>, _env: Env) -> Value {
         return Value::error("InvalidArgs", args);
     };
     Value::symbol(if t.contains_key(k) { "true" } else { "false" })
+}
+
+pub fn findall(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::String(re), Value::String(haystack)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    let re = match Regex::new(re) {
+        Ok(re) => re,
+        Err(regex::Error::CompiledTooBig(i)) => {
+            return Value::error("RegexTooLong", vec![Value::Int(i as i32)])
+        }
+        Err(regex::Error::Syntax(syn)) => {
+            return Value::error("InvalidRegex", vec![Value::String(syn)])
+        }
+        Err(_) => return Value::error("RegexError", Vec::new()),
+    };
+    Value::List(Rc::from(
+        re.find_iter(haystack)
+            .map(|m| Value::String(m.as_str().to_string()))
+            .collect::<Vec<Value>>(),
+    ))
 }

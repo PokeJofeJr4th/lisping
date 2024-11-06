@@ -51,6 +51,18 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         Value::function(Rc::new(|v, _| Value::List(v.into()))),
     );
     data.insert("not".to_string(), Value::function(Rc::new(builtins::not)));
+    data.insert(
+        "print".to_string(),
+        Value::function(Rc::new(builtins::print)),
+    );
+    data.insert(
+        "input".to_string(),
+        Value::function(Rc::new(builtins::input)),
+    );
+    data.insert(
+        "findall".to_string(),
+        Value::function(Rc::new(builtins::findall)),
+    );
     data.insert("eval".to_string(), Value::function(Rc::new(builtins::eval)));
     data.insert("str".to_string(), Value::function(Rc::new(builtins::str)));
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
