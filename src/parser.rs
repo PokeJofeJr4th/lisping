@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Rc};
 
-use crate::{eval::Value, line_count::LineCountable};
+use crate::{line_count::LineCountable, types::Value};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum ParserState {

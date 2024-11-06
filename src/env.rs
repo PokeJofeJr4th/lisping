@@ -2,8 +2,9 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
-    eval::{self, builtins, Value},
+    eval::{self, builtins},
     parser::parse,
+    types::Value,
 };
 
 pub struct EnvData {

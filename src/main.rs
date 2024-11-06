@@ -8,12 +8,14 @@ use std::{
 };
 
 use clap::Parser;
-use eval::Value;
 
 pub mod env;
 pub mod eval;
 pub mod line_count;
 pub mod parser;
+pub mod types;
+
+use types::Value;
 
 #[derive(Parser)]
 struct Args {

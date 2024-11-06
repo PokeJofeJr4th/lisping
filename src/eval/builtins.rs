@@ -3,7 +3,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use crate::env::Env;
 
-use super::{DynFn, Value};
+use crate::types::{DynFn, Value};
 
 pub fn add(args: Vec<Value>, _env: Env) -> Value {
     let mut sum = 0;
