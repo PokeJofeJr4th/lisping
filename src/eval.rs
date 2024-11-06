@@ -209,7 +209,22 @@ impl PartialEq for Value {
                     fn_ref: b,
                     is_macro: b_m,
                 },
-            ) => a_m == b_m && core::ptr::eq(a.as_ref(), b.as_ref()),
+            ) => *a_m == *b_m && core::ptr::eq(a.as_ref(), b.as_ref()),
+            (
+                Self::Lambda {
+                    args: a_a,
+                    body: a_b,
+                    captures: _,
+                    is_macro: a_c,
+                },
+                Self::Lambda {
+                    args: b_a,
+                    body: b_b,
+                    captures: _,
+                    is_macro: b_c,
+                },
+            ) => **a_a == **b_a && **a_b == **b_b && *a_c == *b_c,
+            (Self::Table(a), Self::Table(b)) => a == b,
             _ => false,
         }
     }
