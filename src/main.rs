@@ -1,5 +1,6 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 use std::{
+    cell::RefCell,
     fs,
     io::{stdin, stdout, Write},
     path::PathBuf,
@@ -34,7 +35,19 @@ fn main() {
     } else {
         let env = env::default_env(Rc::new([]));
         let mut code = Value::nil();
-        loop {
+        let quit_flag = Rc::new(RefCell::new(false));
+        let qf = quit_flag.clone();
+        env.borrow_mut().set(
+            "quit",
+            Value::Function {
+                fn_ref: Rc::new(move |_, _| {
+                    qf.replace(true);
+                    Value::nil()
+                }),
+                is_macro: false,
+            },
+        );
+        while !*quit_flag.borrow() {
             print!("> ");
             stdout().flush().unwrap();
             let mut s = String::new();
