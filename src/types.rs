@@ -144,9 +144,9 @@ impl Display for Value {
                 write!(f, "(")?;
                 for (i, v) in arg0.iter().enumerate() {
                     if i == 0 {
-                        write!(f, "{v}")?;
+                        write!(f, "{v:?}")?;
                     } else {
-                        write!(f, " {v}")?;
+                        write!(f, " {v:?}")?;
                     }
                 }
                 write!(f, ")")
@@ -155,9 +155,9 @@ impl Display for Value {
                 write!(f, "{{")?;
                 for (i, (k, v)) in t.iter().enumerate() {
                     if i == 0 {
-                        write!(f, "{k} {v}")?;
+                        write!(f, "{k:?} {v:?}")?;
                     } else {
-                        write!(f, " {k} {v}")?;
+                        write!(f, " {k:?} {v:?}")?;
                     }
                 }
                 write!(f, "}}")

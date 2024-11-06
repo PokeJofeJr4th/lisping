@@ -78,6 +78,7 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         Value::function(Rc::new(builtins::first)),
     );
     data.insert("rest".to_string(), Value::function(Rc::new(builtins::rest)));
+    data.insert("cons".to_string(), Value::function(Rc::new(builtins::cons)));
     data.insert("get".to_string(), Value::function(Rc::new(builtins::get)));
     data.insert("keys".to_string(), Value::function(Rc::new(builtins::keys)));
     data.insert(

@@ -1,6 +1,6 @@
 (list
 (+ 2 (* 3 4))
-(str 'hello (chr 32) 'world)
+(str "hello world")
 ((\ (x) (+ x 2)) 10)
 (list 1 2 (+ 4 (\ (x) (+ x 2))) '(1 2 3 4))
 `(1 2 3 4 ~(+ 2 3) 6)

@@ -174,11 +174,11 @@ pub fn nth(mut args: Vec<Value>, _env: Env) -> Value {
         Value::List(l) => l,
         o => return Value::error("NotAList", vec![o]),
     };
-    let i = match args.remove(1) {
+    let i = match args.remove(0) {
         Value::Int(i) => i,
         o => return Value::error("NotANumber", vec![o]),
     };
-    if (i as usize) < l.len() {
+    if (i as usize) >= l.len() {
         Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])
     } else {
         l.get(i as usize).unwrap().clone()
@@ -330,8 +330,19 @@ pub fn findall(args: Vec<Value>, _env: Env) -> Value {
         Err(_) => return Value::error("RegexError", Vec::new()),
     };
     Value::List(Rc::from(
-        re.find_iter(haystack)
+        re.captures_iter(haystack)
+            .map(|m| m.get(1).unwrap())
+            .filter(|s| !s.is_empty())
             .map(|m| Value::String(m.as_str().to_string()))
             .collect::<Vec<Value>>(),
     ))
+}
+
+pub fn cons(args: Vec<Value>, _env: Env) -> Value {
+    let [elem, Value::List(l)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    let mut elements = vec![elem.clone()];
+    elements.extend(l.iter().cloned());
+    Value::List(Rc::from(elements))
 }

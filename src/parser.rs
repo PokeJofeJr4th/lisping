@@ -94,6 +94,23 @@ pub fn parse(src: &str) -> Result<Value, String> {
                     }
                     #[allow(clippy::cast_possible_wrap)]
                     break 'inner Value::Int(int_value as i32);
+                } else if c == '"' {
+                    let mut string_buf = String::new();
+                    while let Some((_, _, c)) = chars.next() {
+                        if c == '"' {
+                            break 'inner Value::String(
+                                string_buf.replace("\\n", "\n").replace("\\\\", "\\"),
+                            );
+                        }
+                        string_buf.push(c);
+                        if c == '\\' {
+                            let Some((_, _, c)) = chars.next() else {
+                                return Err("Unexpected EOF".to_string());
+                            };
+                            string_buf.push(c);
+                        }
+                    }
+                    return Err(format!("Unmatched quote; {row}:{col}"));
                 } else {
                     let mut id_buffer = String::from(c);
                     while let Some((_, _, c)) = chars.peek() {
