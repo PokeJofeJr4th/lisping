@@ -65,6 +65,7 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     );
     data.insert("eval".to_string(), Value::function(Rc::new(builtins::eval)));
     data.insert("str".to_string(), Value::function(Rc::new(builtins::str)));
+    data.insert("int".to_string(), Value::function(Rc::new(builtins::int)));
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
     data.insert("map".to_string(), Value::function(Rc::new(builtins::map)));
     data.insert("nth".to_string(), Value::function(Rc::new(builtins::nth)));
@@ -77,6 +78,7 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         "first".to_string(),
         Value::function(Rc::new(builtins::first)),
     );
+    data.insert("last".to_string(), Value::function(Rc::new(builtins::last)));
     data.insert("rest".to_string(), Value::function(Rc::new(builtins::rest)));
     data.insert("cons".to_string(), Value::function(Rc::new(builtins::cons)));
     data.insert("get".to_string(), Value::function(Rc::new(builtins::get)));
@@ -109,6 +111,14 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert(
         "table?".to_string(),
         Value::function(builtins::type_is("table")),
+    );
+    data.insert(
+        "nil?".to_string(),
+        Value::function(builtins::type_is("nil")),
+    );
+    data.insert(
+        "bool?".to_string(),
+        Value::function(builtins::type_is("bool")),
     );
     data.insert(
         "symbol?".to_string(),

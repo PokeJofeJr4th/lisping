@@ -98,11 +98,18 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
     match &args[0] {
         Value::Int(_) => Value::symbol("int"),
         Value::Symbol(s) => match &**s {
-            "err" => Value::symbol("err"),
+            "true" | "false" => Value::symbol("bool"),
+            "nil" => Value::symbol("nil"),
             _ => Value::symbol("symbol"),
         },
         Value::String(_) => Value::symbol("string"),
-        Value::List(_) => Value::symbol("list"),
+        Value::List(l) => {
+            if l.first().is_some_and(|v| v.is_symbol("err")) {
+                Value::symbol("err")
+            } else {
+                Value::symbol("list")
+            }
+        }
         Value::Table(_) => Value::symbol("table"),
         Value::Function { is_macro, .. } | Value::Lambda { is_macro, .. } => {
             Value::symbol(if *is_macro { "macro" } else { "function" })
@@ -143,6 +150,32 @@ pub fn chr(mut args: Vec<Value>, _env: Env) -> Value {
     )
 }
 
+pub fn int(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    match args.remove(0) {
+        Value::Int(i) => Value::Int(i),
+        Value::String(s) => match s.parse() {
+            Ok(i) => Value::Int(i),
+            Err(err) => Value::error(
+                "ParseError",
+                vec![
+                    Value::String(s),
+                    Value::symbol(match err.kind() {
+                        std::num::IntErrorKind::Empty => "EmptyString",
+                        std::num::IntErrorKind::InvalidDigit => "InvalidDigit",
+                        std::num::IntErrorKind::PosOverflow => "PositiveOverflow",
+                        std::num::IntErrorKind::NegOverflow => "NegativeOverflow",
+                        _ => "UnknownReason",
+                    }),
+                ],
+            ),
+        },
+        other => Value::error("InvalidArgs", vec![other]),
+    }
+}
+
 /// Apply a function to each value of a list
 pub fn map(mut args: Vec<Value>, env: Env) -> Value {
     if args.len() != 2 {
@@ -170,18 +203,20 @@ pub fn nth(mut args: Vec<Value>, _env: Env) -> Value {
     if args.len() != 2 {
         return Value::error("InvalidArgs", args);
     }
-    let l = match args.remove(0) {
-        Value::List(l) => l,
-        o => return Value::error("NotAList", vec![o]),
-    };
     let i = match args.remove(0) {
         Value::Int(i) => i,
         o => return Value::error("NotANumber", vec![o]),
     };
-    if (i as usize) >= l.len() {
-        Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])
-    } else {
-        l.get(i as usize).unwrap().clone()
+    match args.remove(0) {
+        Value::List(l) => l
+            .get(i as usize)
+            .cloned()
+            .unwrap_or_else(|| Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])),
+        Value::String(s) => s.chars().nth(i as usize).map_or_else(
+            || Value::error("InvalidIndex", Vec::new()),
+            |c| Value::String(c.to_string()),
+        ),
+        o => Value::error("NotAList", vec![o]),
     }
 }
 
@@ -190,12 +225,32 @@ pub fn first(mut args: Vec<Value>, _env: Env) -> Value {
         return Value::error("InvalidArgs", args);
     }
     let arg = args.remove(0);
-    if arg.is_symbol("nil") {
-        arg
-    } else if let Value::List(l) = arg {
-        l.first().cloned().unwrap_or_else(Value::nil)
-    } else {
-        Value::error("NotAList", vec![arg])
+    match arg {
+        Value::Symbol(ref s) if s == "nil" => arg,
+        Value::List(l) => l.first().cloned().unwrap_or_else(Value::nil),
+        Value::String(s) => s
+            .chars()
+            .next()
+            .map(|c| c.to_string())
+            .map_or_else(Value::nil, Value::String),
+        other => Value::error("InvalidArgs", vec![other]),
+    }
+}
+
+pub fn last(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let arg = args.remove(0);
+    match arg {
+        Value::Symbol(ref s) if s == "nil" => arg,
+        Value::List(l) => l.last().cloned().unwrap_or_else(Value::nil),
+        Value::String(s) => s
+            .chars()
+            .last()
+            .map(|c| c.to_string())
+            .map_or_else(Value::nil, Value::String),
+        other => Value::error("InvalidArgs", vec![other]),
     }
 }
 
