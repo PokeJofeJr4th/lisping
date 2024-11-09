@@ -65,6 +65,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     );
     data.insert("eval".to_string(), Value::function(Rc::new(builtins::eval)));
     data.insert("str".to_string(), Value::function(Rc::new(builtins::str)));
+    data.insert(
+        "symbol".to_string(),
+        Value::function(Rc::new(builtins::symbol)),
+    );
     data.insert("int".to_string(), Value::function(Rc::new(builtins::int)));
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
     data.insert("map".to_string(), Value::function(Rc::new(builtins::map)));

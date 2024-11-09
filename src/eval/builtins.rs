@@ -136,6 +136,16 @@ pub fn str(args: Vec<Value>, _env: Env) -> Value {
     Value::String(str)
 }
 
+pub fn symbol(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    let Value::String(s) = args.remove(0) else {
+        return Value::error("InvalidArgs", args);
+    };
+    Value::Symbol(s)
+}
+
 pub fn chr(mut args: Vec<Value>, _env: Env) -> Value {
     if args.len() != 1 {
         return Value::error("InvalidArgs", args);
@@ -203,7 +213,7 @@ pub fn nth(mut args: Vec<Value>, _env: Env) -> Value {
     if args.len() != 2 {
         return Value::error("InvalidArgs", args);
     }
-    let i = match args.remove(0) {
+    let i = match args.remove(1) {
         Value::Int(i) => i,
         o => return Value::error("NotANumber", vec![o]),
     };
