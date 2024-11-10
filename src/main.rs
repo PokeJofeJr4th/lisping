@@ -44,7 +44,7 @@ fn main() {
             Value::Function {
                 fn_ref: Rc::new(move |_, _| {
                     qf.replace(true);
-                    Value::nil()
+                    Ok(Value::nil())
                 }),
                 is_macro: false,
             },
@@ -66,8 +66,15 @@ fn main() {
                 }
             };
             let result = eval::eval(code.clone(), env.clone());
-            println!("{result:?}");
-            env.borrow_mut().set("_", result);
+            match result {
+                Ok(result) => {
+                    println!("{result:?}");
+                    env.borrow_mut().set("_", result);
+                }
+                Err(result) => {
+                    println!("err: {result:?}");
+                }
+            }
         }
     }
 }

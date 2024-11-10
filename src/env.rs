@@ -53,7 +53,7 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert(">=".to_string(), Value::function(Rc::new(builtins::ge)));
     data.insert(
         "list".to_string(),
-        Value::function(Rc::new(|v, _| Value::List(v.into()))),
+        Value::function(Rc::new(|v, _| Ok(Value::List(v.into())))),
     );
     data.insert(
         "print".to_string(),
@@ -150,6 +150,6 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     );
     data.insert("*ARGS*".to_string(), Value::List(args));
     let env = Rc::new(RefCell::new(EnvData { parent: None, data }));
-    eval::eval(parse(include_str!("../stdlib.lisp")).unwrap(), env.clone());
+    eval::eval(parse(include_str!("../stdlib.lisp")).unwrap(), env.clone()).unwrap();
     env
 }

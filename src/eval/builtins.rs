@@ -1,4 +1,4 @@
-#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::needless_pass_by_value, clippy::missing_errors_doc)]
 use std::io::stdin;
 use std::{collections::HashMap, rc::Rc};
 
@@ -8,105 +8,105 @@ use crate::env::{new_env, Env};
 
 use crate::types::{DynFn, Value};
 
-pub fn add(args: Vec<Value>, _env: Env) -> Value {
+pub fn add(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut sum = 0;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error("NotANumber", vec![arg]);
+            return Err(Value::error("NotANumber", vec![arg]));
         };
         sum += i;
     }
-    Value::Int(sum)
+    Ok(Value::Int(sum))
 }
 
-pub fn sub(args: Vec<Value>, _env: Env) -> Value {
+pub fn sub(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut difference = 0;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error("NotANumber", vec![arg]);
+            return Err(Value::error("NotANumber", vec![arg]));
         };
         // I promise this makes a little bit of sense
         difference = -i - difference;
     }
-    Value::Int(difference)
+    Ok(Value::Int(difference))
 }
 
-pub fn mul(args: Vec<Value>, _env: Env) -> Value {
+pub fn mul(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut product = 1;
     for arg in args {
         let Value::Int(i) = arg else {
-            return Value::error("NotANumber", vec![arg]);
+            return Err(Value::error("NotANumber", vec![arg]));
         };
         product *= i;
     }
-    Value::Int(product)
+    Ok(Value::Int(product))
 }
 
-pub fn div(args: Vec<Value>, _env: Env) -> Value {
+pub fn div(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", vec![Value::List(args.into())]);
+        return Err(Value::error("InvalidArgs", vec![Value::List(args.into())]));
     };
     if *b == 0 {
-        Value::error("DivideByZero", vec![])
+        Err(Value::error("DivideByZero", vec![]))
     } else {
-        Value::Int(*a / *b)
+        Ok(Value::Int(*a / *b))
     }
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn eq(args: Vec<Value>, _env: Env) -> Value {
+pub fn eq(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() <= 1 || args.iter().skip(1).all(|x| x == &args[0]) {
-        Value::symbol("true")
+        Ok(Value::symbol("true"))
     } else {
-        Value::symbol("false")
+        Ok(Value::symbol("false"))
     }
 }
 
-pub fn lt(args: Vec<Value>, _env: Env) -> Value {
+pub fn lt(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     if *a < *b {
-        Value::symbol("true")
+        Ok(Value::symbol("true"))
     } else {
-        Value::symbol("false")
+        Ok(Value::symbol("false"))
     }
 }
 
-pub fn le(args: Vec<Value>, _env: Env) -> Value {
+pub fn le(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     if *a <= *b {
-        Value::symbol("true")
+        Ok(Value::symbol("true"))
     } else {
-        Value::symbol("false")
+        Ok(Value::symbol("false"))
     }
 }
 
-pub fn gt(args: Vec<Value>, _env: Env) -> Value {
+pub fn gt(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     if *a > *b {
-        Value::symbol("true")
+        Ok(Value::symbol("true"))
     } else {
-        Value::symbol("false")
+        Ok(Value::symbol("false"))
     }
 }
 
-pub fn ge(args: Vec<Value>, _env: Env) -> Value {
+pub fn ge(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     if *a >= *b {
-        Value::symbol("true")
+        Ok(Value::symbol("true"))
     } else {
-        Value::symbol("false")
+        Ok(Value::symbol("false"))
     }
 }
 
-pub fn print(args: Vec<Value>, _env: Env) -> Value {
+pub fn print(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     for (i, val) in args.into_iter().enumerate() {
         if i == 0 {
             print!("{val}");
@@ -115,20 +115,20 @@ pub fn print(args: Vec<Value>, _env: Env) -> Value {
         }
     }
     println!();
-    Value::nil()
+    Ok(Value::nil())
 }
 
-pub fn input(args: Vec<Value>, _env: Env) -> Value {
+pub fn input(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut buf = String::new();
     stdin().read_line(&mut buf).unwrap();
-    Value::String(buf)
+    Ok(Value::String(buf))
 }
 
-pub fn typ(args: Vec<Value>, _env: Env) -> Value {
+pub fn typ(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
-    match &args[0] {
+    Ok(match &args[0] {
         Value::Int(_) => Value::symbol("int"),
         Value::Symbol(s) => match &**s {
             "true" | "false" => Value::symbol("bool"),
@@ -136,72 +136,66 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Value {
             _ => Value::symbol("symbol"),
         },
         Value::String(_) => Value::symbol("string"),
-        Value::List(l) => {
-            if l.first().is_some_and(|v| v.is_symbol("err")) {
-                Value::symbol("err")
-            } else {
-                Value::symbol("list")
-            }
-        }
+        Value::List(_) => Value::symbol("list"),
         Value::Table(_) => Value::symbol("table"),
         Value::Function { is_macro, .. } | Value::Lambda { is_macro, .. } => {
             Value::symbol(if *is_macro { "macro" } else { "function" })
         }
-    }
+    })
 }
 
 #[must_use]
 pub fn type_is(type_is: &'static str) -> Rc<DynFn> {
     Rc::new(|args, env| {
-        if typ(args, env).is_symbol(type_is) {
-            Value::symbol("true")
+        if typ(args, env)?.is_symbol(type_is) {
+            Ok(Value::symbol("true"))
         } else {
-            Value::symbol("false")
+            Ok(Value::symbol("false"))
         }
     })
 }
 
-pub fn str(args: Vec<Value>, _env: Env) -> Value {
+pub fn str(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut str = String::new();
     for arg in args {
         str.push_str(&format!("{arg}"));
     }
-    Value::String(str)
+    Ok(Value::String(str))
 }
 
-pub fn symbol(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn symbol(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let Value::String(s) = args.remove(0) else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    Value::Symbol(s)
+    Ok(Value::Symbol(s))
 }
 
-pub fn chr(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn chr(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let Value::Int(i) = args.remove(0) else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     #[allow(clippy::cast_sign_loss)]
     char::try_from(i as u32).map_or_else(
-        |_| Value::error("InvalidChar", vec![Value::Int(i)]),
-        |c| Value::String(c.to_string()),
+        |_| Err(Value::error("InvalidChar", vec![Value::Int(i)])),
+        |c| Ok(Value::String(c.to_string())),
     )
 }
 
-pub fn int(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn int(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     match args.remove(0) {
-        Value::Int(i) => Value::Int(i),
+        Value::Int(i) => Ok(Value::Int(i)),
         Value::String(s) => match s.parse() {
-            Ok(i) => Value::Int(i),
-            Err(err) => Value::error(
+            Ok(i) => Ok(Value::Int(i)),
+            Err(err) => Err(Value::error(
                 "ParseError",
                 vec![
                     Value::String(s),
@@ -213,16 +207,16 @@ pub fn int(mut args: Vec<Value>, _env: Env) -> Value {
                         _ => "UnknownReason",
                     }),
                 ],
-            ),
+            )),
         },
-        other => Value::error("InvalidArgs", vec![other]),
+        other => Err(Value::error("InvalidArgs", vec![other])),
     }
 }
 
 /// Apply a function to each value of a list
-pub fn map(mut args: Vec<Value>, env: Env) -> Value {
+pub fn map(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
     if args.len() != 2 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let func = args.remove(1);
     let func = match func {
@@ -244,114 +238,114 @@ pub fn map(mut args: Vec<Value>, env: Env) -> Value {
             drop(env_borrow);
             super::eval(*body.clone(), env)
         }),
-        other => return Value::error("NotAFunction", vec![other]),
+        other => return Err(Value::error("NotAFunction", vec![other])),
     };
     let Value::List(l) = args.remove(0) else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    Value::List(
+    Ok(Value::List(
         l.iter()
             .map(|v| func(vec![v.clone()], env.clone()))
-            .collect(),
-    )
+            .collect::<Result<_, _>>()?,
+    ))
 }
 
 /// # Panics
 #[allow(clippy::cast_sign_loss)]
-pub fn nth(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn nth(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 2 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let i = match args.remove(1) {
         Value::Int(i) => i,
-        o => return Value::error("NotANumber", vec![o]),
+        o => return Err(Value::error("NotANumber", vec![o])),
     };
     match args.remove(0) {
         Value::List(l) => l
             .get(i as usize)
             .cloned()
-            .unwrap_or_else(|| Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])),
-        Value::String(s) => s.chars().nth(i as usize).map_or_else(
-            || Value::error("InvalidIndex", Vec::new()),
-            |c| Value::String(c.to_string()),
-        ),
-        o => Value::error("NotAList", vec![o]),
+            .ok_or_else(|| Value::error("InvalidIndex", vec![Value::List(l), Value::Int(i)])),
+        Value::String(s) => s
+            .chars()
+            .nth(i as usize)
+            .map(|c| Value::String(c.to_string()))
+            .ok_or_else(|| Value::error("InvalidIndex", Vec::new())),
+        o => Err(Value::error("NotAList", vec![o])),
     }
 }
 
-pub fn first(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn first(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let arg = args.remove(0);
     match arg {
-        Value::Symbol(ref s) if s == "nil" => arg,
-        Value::List(l) => l.first().cloned().unwrap_or_else(Value::nil),
+        Value::Symbol(ref s) if s == "nil" => Ok(arg),
+        Value::List(l) => Ok(l.first().cloned().unwrap_or_else(Value::nil)),
         Value::String(s) => s
             .chars()
             .next()
-            .map(|c| c.to_string())
-            .map_or_else(Value::nil, Value::String),
-        other => Value::error("InvalidArgs", vec![other]),
+            .map(|c| Value::String(c.to_string()))
+            .ok_or_else(Value::nil),
+        other => Err(Value::error("InvalidArgs", vec![other])),
     }
 }
 
-pub fn last(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn last(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let arg = args.remove(0);
     match arg {
-        Value::Symbol(ref s) if s == "nil" => arg,
-        Value::List(l) => l.last().cloned().unwrap_or_else(Value::nil),
-        Value::String(s) => s
+        Value::Symbol(ref s) if s == "nil" => Ok(arg),
+        Value::List(l) => Ok(l.last().cloned().unwrap_or_else(Value::nil)),
+        Value::String(s) => Ok(s
             .chars()
             .last()
-            .map(|c| c.to_string())
-            .map_or_else(Value::nil, Value::String),
-        other => Value::error("InvalidArgs", vec![other]),
+            .map_or_else(Value::nil, |c| Value::String(c.to_string()))),
+        other => Err(Value::error("InvalidArgs", vec![other])),
     }
 }
 
-pub fn rest(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn rest(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let arg = args.remove(0);
     if arg.is_symbol("nil") {
-        arg
+        Ok(arg)
     } else if let Value::List(l) = arg {
         if l.is_empty() {
-            Value::List(Rc::new([]))
+            Ok(Value::List(Rc::new([])))
         } else {
-            Value::List(l[1..].into())
+            Ok(Value::List(l[1..].into()))
         }
     } else {
-        Value::error("NotAList", vec![arg])
+        Err(Value::error("NotAList", vec![arg]))
     }
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn eval(mut args: Vec<Value>, env: Env) -> Value {
+pub fn eval(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
     if args.len() == 1 {
         super::eval(args.remove(0), env)
     } else {
-        Value::List(
+        Ok(Value::List(
             args.into_iter()
                 .map(|v| super::eval(v, env.clone()))
-                .collect(),
-        )
+                .collect::<Result<_, _>>()?,
+        ))
     }
 }
 
-pub fn apply(mut args: Vec<Value>, env: Env) -> Value {
+pub fn apply(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
     if args.len() != 2 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let func = args.remove(0);
     let l = match args.remove(0) {
         Value::List(l) => l,
-        other => return Value::error("NotAList", vec![other]),
+        other => return Err(Value::error("NotAList", vec![other])),
     };
     match func {
         Value::Function {
@@ -372,139 +366,143 @@ pub fn apply(mut args: Vec<Value>, env: Env) -> Value {
             drop(env_borrow);
             super::eval(*body, env)
         }
-        other => Value::error("NotAFunction", vec![other]),
+        other => Err(Value::error("NotAFunction", vec![other])),
     }
 }
 
-pub fn as_macro(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn as_macro(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     match args.remove(0) {
         Value::Function {
             fn_ref,
             is_macro: false,
-        } => Value::Function {
+        } => Ok(Value::Function {
             fn_ref,
             is_macro: true,
-        },
+        }),
         Value::Lambda {
             args,
             body,
             captures,
             is_macro: false,
-        } => Value::Lambda {
+        } => Ok(Value::Lambda {
             args,
             body,
             captures,
             is_macro: true,
-        },
-        other => Value::error("NotAFunction", vec![other]),
+        }),
+        other => Err(Value::error("NotAFunction", vec![other])),
     }
 }
 
-pub fn assoc(args: Vec<Value>, _env: Env) -> Value {
+pub fn assoc(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() % 2 == 0 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let mut args = args.into_iter();
     let table = match args.next() {
         Some(Value::Table(t)) => t,
-        Some(other) => return Value::error("NotATable", vec![other]),
+        Some(other) => return Err(Value::error("NotATable", vec![other])),
         None => unreachable!(),
     };
     let mut table: HashMap<_, _> = (*table).clone();
     while let (Some(k), Some(v)) = (args.next(), args.next()) {
         table.insert(k, v);
     }
-    Value::Table(Rc::new(table))
+    Ok(Value::Table(Rc::new(table)))
 }
 
-pub fn dissoc(args: Vec<Value>, _env: Env) -> Value {
+pub fn dissoc(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() <= 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     let mut args = args.into_iter();
     let table = match args.next() {
         Some(Value::Table(t)) => t,
-        Some(other) => return Value::error("NotATable", vec![other]),
+        Some(other) => return Err(Value::error("NotATable", vec![other])),
         None => unreachable!(),
     };
     let mut table: HashMap<_, _> = (*table).clone();
     for k in args {
         table.remove(&k);
     }
-    Value::Table(Rc::new(table))
+    Ok(Value::Table(Rc::new(table)))
 }
 
-pub fn get(args: Vec<Value>, _env: Env) -> Value {
+pub fn get(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Table(t), k] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    t.get(k).cloned().unwrap_or_else(Value::nil)
+    Ok(t.get(k).cloned().unwrap_or_else(Value::nil))
 }
 
-pub fn keys(args: Vec<Value>, _env: Env) -> Value {
+pub fn keys(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Table(t)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    Value::List(t.keys().cloned().collect::<Vec<_>>().into())
+    Ok(Value::List(t.keys().cloned().collect::<Vec<_>>().into()))
 }
 
-pub fn values(args: Vec<Value>, _env: Env) -> Value {
+pub fn values(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Table(t)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    Value::List(t.values().cloned().collect::<Vec<_>>().into())
+    Ok(Value::List(t.values().cloned().collect::<Vec<_>>().into()))
 }
 
-pub fn contains(args: Vec<Value>, _env: Env) -> Value {
+pub fn contains(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Table(t), k] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
-    Value::symbol(if t.contains_key(k) { "true" } else { "false" })
+    Ok(Value::symbol(if t.contains_key(k) {
+        "true"
+    } else {
+        "false"
+    }))
 }
 
-pub fn findall(args: Vec<Value>, _env: Env) -> Value {
+pub fn findall(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::String(re), Value::String(haystack)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     let re = match Regex::new(re) {
         Ok(re) => re,
         Err(regex::Error::CompiledTooBig(i)) => {
-            return Value::error("RegexTooLong", vec![Value::Int(i as i32)])
+            return Err(Value::error("RegexTooLong", vec![Value::Int(i as i32)]))
         }
         Err(regex::Error::Syntax(syn)) => {
-            return Value::error("InvalidRegex", vec![Value::String(syn)])
+            return Err(Value::error("InvalidRegex", vec![Value::String(syn)]))
         }
-        Err(_) => return Value::error("RegexError", Vec::new()),
+        Err(_) => return Err(Value::error("RegexError", Vec::new())),
     };
-    Value::List(Rc::from(
+    Ok(Value::List(Rc::from(
         re.captures_iter(haystack)
             .map(|m| m.get(1).unwrap())
             .filter(|s| !s.is_empty())
             .map(|m| Value::String(m.as_str().to_string()))
             .collect::<Vec<Value>>(),
-    ))
+    )))
 }
 
-pub fn cons(args: Vec<Value>, _env: Env) -> Value {
+pub fn cons(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [elem, Value::List(l)] = &args[..] else {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     };
     let mut elements = vec![elem.clone()];
     elements.extend(l.iter().cloned());
-    Value::List(Rc::from(elements))
+    Ok(Value::List(Rc::from(elements)))
 }
 
-pub fn count(mut args: Vec<Value>, _env: Env) -> Value {
+pub fn count(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
-        return Value::error("InvalidArgs", args);
+        return Err(Value::error("InvalidArgs", args));
     }
     match args.remove(0) {
-        Value::List(l) => Value::Int(l.len() as i32),
-        Value::String(s) => Value::Int(s.len() as i32),
-        Value::Table(t) => Value::Int(t.len() as i32),
-        other => Value::error("NotASequence", vec![other]),
+        Value::List(l) => Ok(Value::Int(l.len() as i32)),
+        Value::String(s) => Ok(Value::Int(s.len() as i32)),
+        Value::Table(t) => Ok(Value::Int(t.len() as i32)),
+        other => Err(Value::error("NotASequence", vec![other])),
     }
 }

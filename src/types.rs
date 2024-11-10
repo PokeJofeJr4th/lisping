@@ -7,7 +7,7 @@ use std::{
 
 use crate::{env::Env, eval::eval};
 
-pub type DynFn = dyn Fn(Vec<Value>, Env) -> Value;
+pub type DynFn = dyn Fn(Vec<Value>, Env) -> Result<Value, Value>;
 
 #[derive(Clone)]
 /// A value in the lisp. This includes source code and runtime data.
@@ -49,20 +49,6 @@ pub enum Value {
 
 impl Value {
     #[must_use]
-    pub fn as_function(&self, func: &str) -> Option<&[Self]> {
-        let Self::List(arr) = self else {
-            return None;
-        };
-        let [Self::Symbol(id), args @ ..] = &arr[..] else {
-            return None;
-        };
-        if id != func {
-            return None;
-        }
-        Some(args)
-    }
-
-    #[must_use]
     pub fn is_symbol(&self, id: &str) -> bool {
         let Self::Symbol(my_id) = self else {
             return false;
@@ -71,39 +57,30 @@ impl Value {
     }
 
     #[must_use]
-    pub fn is_err(&self) -> bool {
-        let Self::List(l) = self else {
-            return false;
-        };
-        l.first().is_some_and(|s| s.is_symbol("err"))
-    }
-
-    #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn error(msg: &str, mut args: Vec<Self>) -> Self {
         args.insert(0, Self::symbol(msg));
-        args.insert(0, Self::symbol("err"));
         Self::List(args.into())
     }
 
-    #[must_use]
-    pub fn quasiquote(&self, env: Env) -> Self {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn quasiquote(&self, env: Env) -> Result<Self, Self> {
         match self {
             other @ (Self::Int(_)
             | Self::String(_)
             | Self::Symbol(_)
             | Self::Function { .. }
             | Self::Table(_)
-            | Self::Lambda { .. }) => other.clone(),
+            | Self::Lambda { .. }) => Ok(other.clone()),
             Self::List(vec) => {
                 if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
                     eval(vec[1].clone(), env)
                 } else {
-                    Self::List(
+                    Ok(Self::List(
                         vec.iter()
                             .map(|v| Self::quasiquote(v, env.clone()))
-                            .collect(),
-                    )
+                            .collect::<Result<_, _>>()?,
+                    ))
                 }
             }
         }
@@ -131,6 +108,14 @@ impl Value {
         Self::Function {
             fn_ref: func,
             is_macro: false,
+        }
+    }
+
+    #[must_use]
+    pub fn as_list(&self) -> Option<&[Self]> {
+        match self {
+            Self::List(l) => Some(l),
+            _ => None,
         }
     }
 }
