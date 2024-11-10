@@ -47,6 +47,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert("*".to_string(), Value::function(Rc::new(builtins::mul)));
     data.insert("/".to_string(), Value::function(Rc::new(builtins::div)));
     data.insert("=".to_string(), Value::function(Rc::new(builtins::eq)));
+    data.insert("<".to_string(), Value::function(Rc::new(builtins::lt)));
+    data.insert("<=".to_string(), Value::function(Rc::new(builtins::le)));
+    data.insert(">".to_string(), Value::function(Rc::new(builtins::gt)));
+    data.insert(">=".to_string(), Value::function(Rc::new(builtins::ge)));
     data.insert(
         "list".to_string(),
         Value::function(Rc::new(|v, _| Value::List(v.into()))),
@@ -64,6 +68,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         Value::function(Rc::new(builtins::findall)),
     );
     data.insert("eval".to_string(), Value::function(Rc::new(builtins::eval)));
+    data.insert(
+        "apply".to_string(),
+        Value::function(Rc::new(builtins::apply)),
+    );
     data.insert("str".to_string(), Value::function(Rc::new(builtins::str)));
     data.insert(
         "symbol".to_string(),

@@ -78,10 +78,10 @@
 ))
 
 (def! repl_env {
-    + (\ (args env) (list (eval (cons '+ args)) env))
-    - (\ (args env) (list (eval (cons '- args)) env))
-    * (\ (args env) (list (eval (cons '* args)) env))
-    / (\ (args env) (list (eval (cons '/ args)) env))
+    + (\ (args env) (list (apply + args) env))
+    - (\ (args env) (list (apply - args) env))
+    * (\ (args env) (list (apply * args) env))
+    / (\ (args env) (list (apply / args) env))
     err (\ (args env) (list (cons 'err args) env))
 })
 

@@ -4,3 +4,4 @@
 
 (defmacro! while (cond body) `(if ~cond (do ~body (while ~cond ~body))))
 (defun! not (x) (if x false true))
+(defun! range (start end) (do (print start end) (if (< start end) (cons start (range (+ start 1) end)) (list))))

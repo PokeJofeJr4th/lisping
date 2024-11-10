@@ -62,6 +62,50 @@ pub fn eq(args: Vec<Value>, _env: Env) -> Value {
     }
 }
 
+pub fn lt(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Int(a), Value::Int(b)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    if *a < *b {
+        Value::symbol("true")
+    } else {
+        Value::symbol("false")
+    }
+}
+
+pub fn le(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Int(a), Value::Int(b)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    if *a <= *b {
+        Value::symbol("true")
+    } else {
+        Value::symbol("false")
+    }
+}
+
+pub fn gt(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Int(a), Value::Int(b)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    if *a > *b {
+        Value::symbol("true")
+    } else {
+        Value::symbol("false")
+    }
+}
+
+pub fn ge(args: Vec<Value>, _env: Env) -> Value {
+    let [Value::Int(a), Value::Int(b)] = &args[..] else {
+        return Value::error("InvalidArgs", args);
+    };
+    if *a >= *b {
+        Value::symbol("true")
+    } else {
+        Value::symbol("false")
+    }
+}
+
 pub fn print(args: Vec<Value>, _env: Env) -> Value {
     for (i, val) in args.into_iter().enumerate() {
         if i == 0 {
@@ -297,6 +341,38 @@ pub fn eval(mut args: Vec<Value>, env: Env) -> Value {
                 .map(|v| super::eval(v, env.clone()))
                 .collect(),
         )
+    }
+}
+
+pub fn apply(mut args: Vec<Value>, env: Env) -> Value {
+    if args.len() != 2 {
+        return Value::error("InvalidArgs", args);
+    }
+    let func = args.remove(0);
+    let l = match args.remove(0) {
+        Value::List(l) => l,
+        other => return Value::error("NotAList", vec![other]),
+    };
+    match func {
+        Value::Function {
+            fn_ref,
+            is_macro: false,
+        } => fn_ref(l.to_vec(), env),
+        Value::Lambda {
+            args: params,
+            body,
+            captures,
+            is_macro: false,
+        } => {
+            let env = new_env(captures);
+            let mut env_borrow = env.borrow_mut();
+            for (param, arg) in params.iter().zip(args) {
+                env_borrow.set(param, arg);
+            }
+            drop(env_borrow);
+            super::eval(*body, env)
+        }
+        other => Value::error("NotAFunction", vec![other]),
     }
 }
 
