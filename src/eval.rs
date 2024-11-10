@@ -20,15 +20,15 @@ pub fn eval(mut syn: Value, mut env: Env) -> Value {
                 }
                 if arr[0].is_symbol("\\") {
                     let [param, body] = &arr[1..] else {
-                        return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
+                        return Value::error("InvalidLambdaError", arr.to_vec());
                     };
                     let Value::List(ids) = param else {
-                        return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
+                        return Value::error("InvalidLambdaError", arr.to_vec());
                     };
                     let mut param_ids = Vec::new();
                     for id in &**ids {
                         let Value::Symbol(id) = id else {
-                            return Value::error("InvalidLambdaError", vec![arr[0].clone()]);
+                            return Value::error("InvalidLambdaError", arr.to_vec());
                         };
                         param_ids.push(id.clone());
                     }

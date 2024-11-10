@@ -37,6 +37,7 @@ pub fn new_env(parent: Env) -> Env {
 }
 
 #[must_use]
+#[allow(clippy::too_many_lines)]
 /// # Panics
 pub fn default_env(args: Rc<[Value]>) -> Env {
     let mut data = HashMap::new();
@@ -50,7 +51,6 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         "list".to_string(),
         Value::function(Rc::new(|v, _| Value::List(v.into()))),
     );
-    data.insert("not".to_string(), Value::function(Rc::new(builtins::not)));
     data.insert(
         "print".to_string(),
         Value::function(Rc::new(builtins::print)),
@@ -73,6 +73,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
     data.insert("map".to_string(), Value::function(Rc::new(builtins::map)));
     data.insert("nth".to_string(), Value::function(Rc::new(builtins::nth)));
+    data.insert(
+        "count".to_string(),
+        Value::function(Rc::new(builtins::count)),
+    );
     data.insert(
         "assoc".to_string(),
         Value::function(Rc::new(builtins::assoc)),

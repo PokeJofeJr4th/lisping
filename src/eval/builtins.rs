@@ -4,7 +4,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use regex::Regex;
 
-use crate::env::Env;
+use crate::env::{new_env, Env};
 
 use crate::types::{DynFn, Value};
 
@@ -59,17 +59,6 @@ pub fn eq(args: Vec<Value>, _env: Env) -> Value {
         Value::symbol("true")
     } else {
         Value::symbol("false")
-    }
-}
-
-pub fn not(args: Vec<Value>, _env: Env) -> Value {
-    let [x] = &args[..] else {
-        return Value::error("InvalidArgs", args);
-    };
-    if x.is_truthy() {
-        Value::symbol("false")
-    } else {
-        Value::symbol("true")
     }
 }
 
@@ -191,18 +180,34 @@ pub fn map(mut args: Vec<Value>, env: Env) -> Value {
     if args.len() != 2 {
         return Value::error("InvalidArgs", args);
     }
-    let func = args.remove(0);
+    let func = args.remove(1);
+    let func = match func {
+        Value::Function {
+            fn_ref,
+            is_macro: false,
+        } => fn_ref,
+        Value::Lambda {
+            args: params,
+            body,
+            captures,
+            is_macro: false,
+        } => Rc::new(move |args, _env| {
+            let env = new_env(captures.clone());
+            let mut env_borrow = env.borrow_mut();
+            for (param, arg) in params.iter().zip(args) {
+                env_borrow.set(param, arg);
+            }
+            drop(env_borrow);
+            super::eval(*body.clone(), env)
+        }),
+        other => return Value::error("NotAFunction", vec![other]),
+    };
     let Value::List(l) = args.remove(0) else {
         return Value::error("InvalidArgs", args);
     };
     Value::List(
         l.iter()
-            .map(|v| {
-                super::eval(
-                    Value::List(vec![func.clone(), v.clone()].into()),
-                    env.clone(),
-                )
-            })
+            .map(|v| func(vec![v.clone()], env.clone()))
             .collect(),
     )
 }
@@ -272,7 +277,11 @@ pub fn rest(mut args: Vec<Value>, _env: Env) -> Value {
     if arg.is_symbol("nil") {
         arg
     } else if let Value::List(l) = arg {
-        Value::List(l[1..].to_vec().into())
+        if l.is_empty() {
+            Value::List(Rc::new([]))
+        } else {
+            Value::List(l[1..].into())
+        }
     } else {
         Value::error("NotAList", vec![arg])
     }
@@ -410,4 +419,16 @@ pub fn cons(args: Vec<Value>, _env: Env) -> Value {
     let mut elements = vec![elem.clone()];
     elements.extend(l.iter().cloned());
     Value::List(Rc::from(elements))
+}
+
+pub fn count(mut args: Vec<Value>, _env: Env) -> Value {
+    if args.len() != 1 {
+        return Value::error("InvalidArgs", args);
+    }
+    match args.remove(0) {
+        Value::List(l) => Value::Int(l.len() as i32),
+        Value::String(s) => Value::Int(s.len() as i32),
+        Value::Table(t) => Value::Int(t.len() as i32),
+        other => Value::error("NotASequence", vec![other]),
+    }
 }
