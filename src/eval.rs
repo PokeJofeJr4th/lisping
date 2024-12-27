@@ -67,7 +67,8 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     return Err(Value::List(
                         // start with the first value unchanged
                         arr.iter()
-                            .take(2)
+                            .skip(1)
+                            .take(1)
                             .cloned()
                             // evaluate everything but the first if they exist
                             .chain(

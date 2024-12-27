@@ -5,6 +5,7 @@ use crate::{line_count::LineCountable, types::Value};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum ParserState {
     Array,
+    List,
     Quote,
     QuasiQuote,
     Unquote,
@@ -63,6 +64,22 @@ pub fn parse(src: &str) -> Result<Value, String> {
                         break 'inner arr;
                     }
                     return Err(format!("Unmatched closing parenthesis at {row}:{col}"));
+                } else if c == '[' {
+                    // begin a new list
+                    parse_stack.push(current_array);
+                    states.push(ParserState::List);
+                    current_array = Vec::new();
+                } else if c == ']' {
+                    // end the current array
+                    if let (Some(previous_level), Some(ParserState::List)) =
+                        (parse_stack.pop(), states.pop())
+                    {
+                        current_array.insert(0, Value::symbol("list"));
+                        let arr = Value::List(current_array.into());
+                        current_array = previous_level;
+                        break 'inner arr;
+                    }
+                    return Err(format!("Unmatched closing square bracket at {row}:{col}"));
                 } else if c == '\'' {
                     states.push(ParserState::Quote);
                 } else if c == '`' {
@@ -76,6 +93,8 @@ pub fn parse(src: &str) -> Result<Value, String> {
                         if c.is_whitespace()
                             || *c == '('
                             || *c == ')'
+                            || *c == '['
+                            || *c == ']'
                             || *c == '#'
                             || *c == '\''
                             || *c == '{'
@@ -117,6 +136,8 @@ pub fn parse(src: &str) -> Result<Value, String> {
                         if c.is_whitespace()
                             || *c == '('
                             || *c == ')'
+                            || *c == '['
+                            || *c == ']'
                             || *c == '#'
                             || *c == '{'
                             || *c == '}'
@@ -158,7 +179,7 @@ pub fn parse(src: &str) -> Result<Value, String> {
                 }
                 Value::Table(Rc::new(hm))
             }
-            Some(ParserState::Array) | None => next_thing,
+            Some(ParserState::Array | ParserState::List) | None => next_thing,
         };
         current_array.push(next_thing);
     }
