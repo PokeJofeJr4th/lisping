@@ -12,11 +12,12 @@ pub mod builtins;
 /// Whenever :3
 #[allow(clippy::too_many_lines, clippy::missing_errors_doc)]
 pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
-    'main: loop {
+    let mut cons: Vec<Value> = Vec::new();
+    let out = 'main: loop {
         match syn {
             Value::List(ref arr) => {
                 if arr.is_empty() {
-                    return Ok(Value::List(Rc::new([])));
+                    break 'main Value::List(Rc::new([]));
                 }
                 if arr[0].is_symbol("\\") {
                     let [param, body] = &arr[1..] else {
@@ -34,19 +35,19 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     }
                     let body = body.clone();
                     let sub_env = new_env(env);
-                    return Ok(Value::Lambda {
+                    break 'main Value::Lambda {
                         args: param_ids,
                         body: Box::new(body),
                         captures: sub_env,
                         is_macro: false,
-                    });
+                    };
                 } else if arr[0].is_symbol("if") {
                     match &arr[1..] {
                         [cond, t] => {
                             if eval(cond.clone(), env.clone())?.is_truthy() {
                                 syn = t.clone();
                             } else {
-                                return Ok(Value::symbol("nil"));
+                                break 'main Value::symbol("nil");
                             }
                         }
                         [cond, t, f] => {
@@ -59,9 +60,9 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                         _ => return Err(Value::error("InvalidArgs", vec![syn.clone()])),
                     }
                 } else if arr[0].is_symbol("quote") {
-                    return Ok(arr[1].clone());
+                    break 'main arr[1].clone();
                 } else if arr[0].is_symbol("quasiquote") {
-                    return arr[1].quasiquote(env);
+                    break 'main arr[1].quasiquote(env)?;
                 } else if arr[0].is_symbol("err") {
                     // if it is an error, evaluate everything but the first and return itself
                     return Err(Value::List(
@@ -79,6 +80,9 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                             )
                             .collect(),
                     ));
+                } else if arr[0].is_symbol("cons") {
+                    cons.push(eval(arr[1].clone(), env.clone())?);
+                    syn = arr[2].clone();
                 } else if arr[0].is_symbol("let*") {
                     if arr.len() != 3 {
                         return Err(Value::error("InvalidArgs", arr.to_vec()));
@@ -89,7 +93,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     };
                     for i in 0..(assigns.len() / 2) {
                         let result = eval(assigns[2 * i + 1].clone(), env.clone())?;
-                        if destructure(assigns[2 * i].clone(), result, env.clone()).is_none() {
+                        if destructure(&assigns[2 * i], result, &env).is_none() {
                             return Err(Value::error("PatternMismatch", arr.to_vec()));
                         }
                     }
@@ -103,7 +107,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     };
                     let result = eval(arr[2].clone(), env.clone())?;
                     env.borrow_mut().set(i, result);
-                    return Ok(Value::nil());
+                    break 'main Value::nil();
                 } else if arr[0].is_symbol("do") {
                     for i in arr.iter().take(arr.len() - 1).skip(1) {
                         eval(i.clone(), env.clone())?;
@@ -169,14 +173,14 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                             fn_ref: func,
                             is_macro: false,
                         } => {
-                            return func(
+                            break 'main func(
                                 arr.iter()
                                     .skip(1)
                                     .cloned()
                                     .map(|v| eval(v, env.clone()))
                                     .collect::<Result<_, _>>()?,
                                 env,
-                            )
+                            )?;
                         }
                         Value::Function {
                             fn_ref: func,
@@ -235,14 +239,22 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     let v = eval(v.clone(), env.clone())?;
                     t.insert(k.clone(), v);
                 }
-                return Ok(Value::Table(Rc::new(t)));
+                break 'main Value::Table(Rc::new(t));
             }
-            other => return Ok(other),
+            other => break 'main other,
         }
+    };
+    if cons.is_empty() {
+        Ok(out)
+    } else if let Value::List(l) = out {
+        cons.extend(l.iter().cloned());
+        Ok(Value::List(Rc::from(cons)))
+    } else {
+        Err(Value::error("NotAList", vec![out]))
     }
 }
 
-fn destructure(pat: Value, value: Value, mut env: Env) -> Option<()> {
+fn destructure(pat: &Value, value: Value, env: &Env) -> Option<()> {
     if let Value::Symbol(s) = &pat {
         env.borrow_mut().set(s, value);
         Some(())
@@ -251,7 +263,7 @@ fn destructure(pat: Value, value: Value, mut env: Env) -> Option<()> {
             return None;
         }
         for i in 0..p.len() {
-            destructure(p[i].clone(), v[i].clone(), env.clone())?;
+            destructure(&p[i], v[i].clone(), env)?;
         }
         Some(())
     } else {

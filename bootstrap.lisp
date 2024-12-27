@@ -11,7 +11,7 @@
     next_char (first reader)
     _ (print "Read Form" reader)
     ) (if (= next_char "(") (read_list (rest reader)) (read_atom reader))
-)))
+))
 
 # gets a single atom from the reader
 (defun! read_atom (reader) (let* (
@@ -28,7 +28,7 @@
         ((form reader) (read_form reader)
         (sub_list reader) (read_list reader)
         [(cons form sub_list) reader]
-    ))
+    )))
 ))
 
 (defun! LET* (lets ret env) (let* (
