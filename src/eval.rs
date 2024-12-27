@@ -88,11 +88,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                         return Err(Value::error("InvalidArgs", arr.to_vec()));
                     };
                     for i in 0..(assigns.len() / 2) {
-                        let Value::Symbol(id) = &assigns[2 * i] else {
-                            return Err(Value::error("InvalidArgs", arr.to_vec()));
-                        };
                         let result = eval(assigns[2 * i + 1].clone(), env.clone())?;
-                        env.borrow_mut().set(id, result);
+                        if destructure(assigns[2 * i].clone(), result, env.clone()).is_none() {
+                            return Err(Value::error("PatternMismatch", arr.to_vec()));
+                        }
                     }
                     syn = arr[2].clone();
                 } else if arr[0].is_symbol("def!") {
@@ -240,5 +239,22 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
             }
             other => return Ok(other),
         }
+    }
+}
+
+fn destructure(pat: Value, value: Value, mut env: Env) -> Option<()> {
+    if let Value::Symbol(s) = &pat {
+        env.borrow_mut().set(s, value);
+        Some(())
+    } else if let (Some(p), Some(v)) = (pat.as_list(), value.as_list()) {
+        if p.len() > v.len() {
+            return None;
+        }
+        for i in 0..p.len() {
+            destructure(p[i].clone(), v[i].clone(), env.clone())?;
+        }
+        Some(())
+    } else {
+        None
     }
 }

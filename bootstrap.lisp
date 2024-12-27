@@ -11,35 +11,28 @@
     next_char (first reader)
     _ (print "Read Form" reader)
     ) (if (= next_char "(") (read_list (rest reader)) (read_atom reader))
-))
+)))
 
 # gets a single atom from the reader
 (defun! read_atom (reader) (let* (
-    atom+reader (next reader)
-    _ (print "atom+reader=" atom+reader)
-    atom (nth atom+reader 0)
-    reader (nth atom+reader 1)
+    (atom reader) (next reader)
     atom (try* (int atom) (catch* _ (symbol atom)))
-    _ (print "Read Atom" atom)
+    #_ (print "Read Atom" atom)
 ) [atom reader]))
 
 # takes elements until reaching a closing parenthesis
 (defun! read_list (reader) (let* (
     next_char (first reader)
-    _ (print "Read List" reader)
+    #_ (print "Read List" reader)
     ) (if (= next_char ")") [[] (rest reader)] (let*
-        (form+reader (read_form reader)
-        form (nth form+reader 0)
-        reader (nth form+reader 1)
-        sub_list+reader (read_list reader)
-        sub_list (nth sub_list+reader 0)
-        reader (nth sub_list+reader 1))
+        ((form reader) (read_form reader)
+        (sub_list reader) (read_list reader)
         [(cons form sub_list) reader]
     ))
 ))
 
 (defun! LET* (lets ret env) (let* (
-        _ (print "let*" lets ret)
+        #_ (print "let*" lets ret)
         binding (first lets)
         value (nth lets 1)
         inner-env (assoc env binding value)
@@ -55,21 +48,18 @@
     )
     (let* (
         _ (print "EVAL" x env)
-        func+env (EVAL (first x) env)
-        _ (print "func+env=" func+env)
-        env (nth func+env 1)
-        func (first func+env)
-        _ (print "(rest x) =" (rest x))
-        _ (print "func =" func)
-        _ (print "map ..." (map (rest x) (\ (y) (first (EVAL y env)))))
+        (func env) (EVAL (first x) env)
+        #_ (print "(rest x) =" (rest x))
+        #_ (print "func =" func)
+        #_ (print "map ..." (map (rest x) (\ (y) (first (EVAL y env)))))
     ) (func (map (rest x) (\ (y) (first (EVAL y env)))) env))
     ) (if (symbol? x) (do (print "EVAL" x) [(if (contains? env x) (get env x) (err UnresolvedIdentifier x)) env]) [x env])
 ))
 
 (defun! rep (x env) (try* (let* (
-    result+env (EVAL (READ x) env)
-    _ (print (first result+env))
-    ) (nth result+env 1)
+    (result env) (EVAL (READ x) env)
+    _ (print result)
+    ) env
 ) (catch* err (do (print "err" err) env))))
 (defun! repl (env) (let* (
     _ (print (str "user>"))
