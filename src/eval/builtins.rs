@@ -229,13 +229,11 @@ pub fn map(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
             body,
             captures,
             is_macro: false,
-        } => Rc::new(move |args, _env| {
+        } => Rc::new(move |vals: Vec<Value>, _env| {
             let env = new_env(captures.clone());
-            let mut env_borrow = env.borrow_mut();
-            for (param, arg) in params.iter().zip(args) {
-                env_borrow.set(param, arg);
+            if super::destructure(&params, vals[0].clone(), &env).is_none() {
+                return Err(Value::error("PatternMismatch", vec![(*params).clone()]));
             }
-            drop(env_borrow);
             super::eval(*body.clone(), env)
         }),
         other => return Err(Value::error("NotAFunction", vec![other])),
@@ -343,15 +341,18 @@ pub fn apply(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
         return Err(Value::error("InvalidArgs", args));
     }
     let func = args.remove(0);
-    let l = match args.remove(0) {
-        Value::List(l) => l,
-        other => return Err(Value::error("NotAList", vec![other])),
-    };
+    let l = args.remove(0);
     match func {
         Value::Function {
             fn_ref,
             is_macro: false,
-        } => fn_ref(l.to_vec(), env),
+        } => fn_ref(
+            match l {
+                Value::List(l) => l.to_vec(),
+                o => return Err(Value::error("NotAList", vec![o])),
+            },
+            env,
+        ),
         Value::Lambda {
             args: params,
             body,
@@ -359,11 +360,9 @@ pub fn apply(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
             is_macro: false,
         } => {
             let env = new_env(captures);
-            let mut env_borrow = env.borrow_mut();
-            for (param, arg) in params.iter().zip(args) {
-                env_borrow.set(param, arg);
+            if super::destructure(&params, l, &env).is_none() {
+                return Err(Value::error("PatternMismatch", vec![*params]));
             }
-            drop(env_borrow);
             super::eval(*body, env)
         }
         other => Err(Value::error("NotAFunction", vec![other])),

@@ -40,7 +40,7 @@ pub enum Value {
     ///
     /// Evaluates to itself
     Lambda {
-        args: Vec<String>,
+        args: Box<Value>,
         body: Box<Value>,
         captures: Env,
         is_macro: bool,

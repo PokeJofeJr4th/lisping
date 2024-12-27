@@ -23,20 +23,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     let [param, body] = &arr[1..] else {
                         return Err(Value::error("InvalidLambdaError", arr.to_vec()));
                     };
-                    let Value::List(ids) = param else {
-                        return Err(Value::error("InvalidLambdaError", arr.to_vec()));
-                    };
-                    let mut param_ids = Vec::new();
-                    for id in &**ids {
-                        let Value::Symbol(id) = id else {
-                            return Err(Value::error("InvalidLambdaError", arr.to_vec()));
-                        };
-                        param_ids.push(id.clone());
-                    }
                     let body = body.clone();
                     let sub_env = new_env(env);
                     break 'main Value::Lambda {
-                        args: param_ids,
+                        args: Box::new(param.clone()),
                         body: Box::new(body),
                         captures: sub_env,
                         is_macro: false,
@@ -189,12 +179,12 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                             syn = func(arr[1..].into(), env.clone())?;
                         }
                         Value::Lambda {
-                            args: params,
+                            args,
                             body,
                             captures,
                             is_macro: false,
                         } => {
-                            let args: Vec<_> = arr
+                            let vals: Vec<_> = arr
                                 .iter()
                                 .skip(1)
                                 .cloned()
@@ -202,24 +192,24 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                                 .collect::<Result<_, _>>()?;
                             env = new_env(captures);
                             syn = *body;
-                            let mut env_borrow = env.borrow_mut();
-                            for (param, arg) in params.into_iter().zip(args) {
-                                env_borrow.set(&param, arg);
+                            let vals = Value::List(Rc::from(vals));
+                            if destructure(&args, vals, &env).is_none() {
+                                return Err(Value::error("PatternMismatch", vec![*args]));
                             }
-                            drop(env_borrow);
                         }
                         Value::Lambda {
-                            args: params,
+                            args,
                             body,
                             captures,
                             is_macro: true,
                         } => {
                             let sub_env = new_env(captures);
-                            let mut sub_env_borrow = sub_env.borrow_mut();
-                            for (param, arg) in params.into_iter().zip(arr.iter().skip(1)) {
-                                sub_env_borrow.set(&param, arg.clone());
+                            let vals = Value::List(Rc::from(
+                                arr.iter().skip(1).cloned().collect::<Vec<_>>(),
+                            ));
+                            if destructure(&args, vals, &sub_env).is_none() {
+                                return Err(Value::error("PatternMismatch", vec![*args]));
                             }
-                            drop(sub_env_borrow);
                             syn = eval(*body, sub_env)?;
                         }
                         other => return Err(Value::error("NotAFunction", vec![other])),
@@ -255,6 +245,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
 }
 
 fn destructure(pat: &Value, value: Value, env: &Env) -> Option<()> {
+    // println!("{pat:?} {value:?}");
     if let Value::Symbol(s) = &pat {
         env.borrow_mut().set(s, value);
         Some(())
