@@ -231,7 +231,7 @@ pub fn map(mut args: Vec<Value>, env: Env) -> Result<Value, Value> {
             is_macro: false,
         } => Rc::new(move |vals: Vec<Value>, _env| {
             let env = new_env(captures.clone());
-            if super::destructure(&params, vals[0].clone(), &env).is_none() {
+            if super::destructure(&params, Value::List(Rc::from(vals)), &env).is_none() {
                 return Err(Value::error("PatternMismatch", vec![(*params).clone()]));
             }
             super::eval(*body.clone(), env)

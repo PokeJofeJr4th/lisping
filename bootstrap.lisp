@@ -9,7 +9,7 @@
 # read a single atom or list
 (defun! read_form (reader) (let* (
     next_char (first reader)
-    _ (print "Read Form" reader)
+    #_ (print "Read Form" reader)
     ) (if (= next_char "(") (read_list (rest reader)) (read_atom reader))
 ))
 
@@ -26,9 +26,9 @@
     #_ (print "Read List" reader)
     ) (if (= next_char ")") [[] (rest reader)] (let*
         ((form reader) (read_form reader)
-        (sub_list reader) (read_list reader)
+        (sub_list reader) (read_list reader))
         [(cons form sub_list) reader]
-    )))
+    ))
 ))
 
 (defun! LET* (lets ret env) (let* (
@@ -47,20 +47,25 @@
         (LET* (nth x 1) (nth x 2) env)
     )
     (let* (
-        _ (print "EVAL" x env)
+        #_ (print "EVAL" x env)
         (func env) (EVAL (first x) env)
         #_ (print "(rest x) =" (rest x))
         #_ (print "func =" func)
         #_ (print "map ..." (map (rest x) (\ (y) (first (EVAL y env)))))
     ) (func (map (rest x) (\ (y) (first (EVAL y env)))) env))
-    ) (if (symbol? x) (do (print "EVAL" x) [(if (contains? env x) (get env x) (err UnresolvedIdentifier x)) env]) [x env])
+    ) (if (symbol? x) (do 
+    #(print "EVAL" x) 
+    [(if (contains? env x) (get env x) (err UnresolvedIdentifier x)) env]) [x env])
 ))
 
 (defun! rep (x env) (try* (let* (
-    (result env) (EVAL (READ x) env)
+    read (READ x)
+    #_ (print "READ" read)
+    (result env) (EVAL read env)
     _ (print result)
     ) env
-) (catch* err (do (print "err" err) env))))
+) (catch* err (do (print (cons 'err err)) env))))
+
 (defun! repl (env) (let* (
     _ (print (str "user>"))
     env (rep (input) env)

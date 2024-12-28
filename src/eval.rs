@@ -106,7 +106,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                 } else if arr[0].is_symbol("try*") {
                     let result = eval(arr[1].clone(), env.clone());
                     match result {
-                        Ok(r) => return Ok(r),
+                        Ok(r) => break 'main r,
                         Err(e) => {
                             for catch_block in &arr[2..] {
                                 let Value::List(l) = catch_block else {
@@ -217,10 +217,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                 }
             }
             Value::Symbol(ref id) if id == "true" || id == "false" || id == "nil" => {
-                return Ok(syn.clone())
+                break 'main syn.clone()
             }
             Value::Symbol(ref id) => match env.borrow().get(id) {
-                Some(x) => return Ok(x),
+                Some(x) => break 'main x,
                 None => return Err(Value::error("UnresolvedIdentifier", vec![syn.clone()])),
             },
             Value::Table(table) => {
