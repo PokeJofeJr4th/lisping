@@ -10,6 +10,9 @@
 ## usage: (class! Dog (bark (self) (print (get self 'name) "says WOOF")))
 ## usage: (call tucky bark)
 ## output: Tucky says WOOF
+## Add another class name in the definition to use inheritance.
+## usage: (class! Animal (init (self sound) (assoc self 'sound sound)))
+## usage: (class! Dog Animal (init (self name) (assoc (call self super "WOOF") 'name name)))
 (defmacro! class! class-args (let* (
         super-or-body (nth class-args 1)
         (name super body) (if (= 2 (count class-args))
