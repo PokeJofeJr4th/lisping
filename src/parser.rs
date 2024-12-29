@@ -27,6 +27,22 @@ pub fn parse(src: &str) -> Result<Value, String> {
                 // println!("{parse_stack:#?}\n{current_array:#?}\n{row}:{col} = {c:?}");
                 // begin a comment
                 if c == '#' {
+                    if chars.peek().is_some_and(|(_, _, x)| *x == '#') {
+                        chars.next();
+                        let mut doc_buf = String::new();
+                        chars.next_if(|(_, _, c)| *c == ' ');
+                        for (_, _, c) in chars.by_ref() {
+                            if c == '\n' {
+                                break;
+                            }
+                            doc_buf.push(c);
+                        }
+                        current_array.push(Value::List(Rc::new([
+                            Value::Symbol("doc".to_string()),
+                            Value::String(doc_buf),
+                        ])));
+                        continue 'by_char;
+                    }
                     // go to the end of the line
                     for (_, _, c) in chars.by_ref() {
                         if c == '\n' {

@@ -13,6 +13,7 @@ pub mod builtins;
 
 pub static DOCS: LazyLock<RwLock<HashMap<String, String>>> =
     LazyLock::new(|| RwLock::new(HashMap::from([])));
+pub static NEXT_DOC: RwLock<String> = RwLock::new(String::new());
 
 /// syntax => value
 /// # Panics
@@ -103,6 +104,13 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                         return Err(Value::error("InvalidArgs@def!", arr.to_vec()));
                     };
                     let result = eval(arr[2].clone(), env.clone())?;
+                    let docstring = core::mem::take(&mut *NEXT_DOC.write().unwrap());
+                    if !docstring.is_empty() {
+                        DOCS.write().unwrap().insert(
+                            i.clone(),
+                            docstring.split('\r').collect::<Vec<_>>().join("\n"),
+                        );
+                    }
                     env.borrow_mut().set(i, result);
                     break 'main Value::nil();
                 } else if arr[0].is_symbol("do") {
@@ -165,16 +173,13 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                         }
                     }
                 } else if arr[0].is_symbol("doc") {
-                    if arr.len() != 3 {
+                    if arr.len() != 2 {
                         return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
                     }
-                    let Value::Symbol(symbol) = arr[1].clone() else {
+                    let Value::String(docstring) = arr[1].clone() else {
                         return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
                     };
-                    let Value::String(docstring) = eval(arr[2].clone(), env)? else {
-                        return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
-                    };
-                    DOCS.write().unwrap().insert(symbol, docstring);
+                    NEXT_DOC.write().unwrap().push_str(&docstring);
                     break 'main Value::nil();
                 } else if arr[0].is_symbol("help") {
                     if arr.len() != 2 {
@@ -183,9 +188,12 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     let Value::Symbol(symbol) = &arr[1] else {
                         return Err(Value::error("InvalidArgs@help", arr.to_vec()));
                     };
+                    println!("-- (help {symbol}) --");
                     if let Some(docstr) = DOCS.read().unwrap().get(symbol) {
                         println!("{docstr}");
+                        // break 'main Value::String(docstr.to_string());
                     }
+                    println!("-- ----{}--- --", "-".repeat(symbol.len()));
                     break 'main Value::nil();
                 } else {
                     match eval(arr[0].clone(), env.clone())? {
