@@ -6,6 +6,9 @@
 ## usage: (defun! my-function (my function parameters) (evaluate the return value))
 (defmacro! defun! (name args body) `(def! ~name (\ ~args ~body)))
 
+## Evaluate all arguments and return the last one
+(defun! do x (last x))
+
 ## Evaluate and discard the result of an expression until a condition is met
 (defmacro! while (cond body) `(if ~cond (do ~body (while ~cond ~body))))
 

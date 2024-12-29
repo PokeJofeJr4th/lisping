@@ -10,9 +10,10 @@ use crate::{
 };
 
 pub mod builtins;
+mod docs;
 
 pub static DOCS: LazyLock<RwLock<HashMap<String, String>>> =
-    LazyLock::new(|| RwLock::new(HashMap::from([])));
+    LazyLock::new(|| RwLock::new(docs::docs()));
 pub static NEXT_DOC: RwLock<String> = RwLock::new(String::new());
 
 /// syntax => value

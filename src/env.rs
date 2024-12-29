@@ -41,7 +41,6 @@ pub fn new_env(parent: Env) -> Env {
 /// # Panics
 pub fn default_env(args: Rc<[Value]>) -> Env {
     let mut data = HashMap::new();
-
     data.insert("+".to_string(), Value::function(Rc::new(builtins::add)));
     data.insert("-".to_string(), Value::function(Rc::new(builtins::sub)));
     data.insert("*".to_string(), Value::function(Rc::new(builtins::mul)));

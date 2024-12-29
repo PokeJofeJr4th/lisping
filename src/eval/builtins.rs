@@ -526,10 +526,7 @@ pub fn inspect_atom(args: Vec<Value>, env: Env) -> Result<Value, Value> {
     };
     let mut atl = at.write().unwrap();
     *atl = apply(
-        vec![
-            args[1].clone(),
-            Value::List(Rc::new([atl.clone()])),
-        ],
+        vec![args[1].clone(), Value::List(Rc::new([atl.clone()]))],
         env,
     )?;
     drop(atl);
