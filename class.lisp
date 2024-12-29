@@ -29,7 +29,7 @@
 ## usage: (call my-object functionName)
 ## usage: (call my-object functionName plus any other parameters)
 (defmacro! call call-args
-    `((\ (o f p) (apply (get o f) (cons o p))) ~(first call-args) (quote ~(nth call-args 1)) (quote ~(trim call-args 2)))
+    `((\ (o f p) (apply (get o f) (cons o p))) ~(first call-args) '~(nth call-args 1) '~(trim call-args 2))
 )
 
 (class! Dog (

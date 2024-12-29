@@ -21,7 +21,7 @@ pub fn parse(src: &str) -> Result<Value, String> {
     // the array of atoms at the current depth
     let mut current_array: Vec<Value> = Vec::new();
     'main: loop {
-        let Some(next_thing) = read_value(
+        let Some(mut next_thing) = read_value(
             &mut chars,
             &mut current_array,
             &mut states,
@@ -30,35 +30,37 @@ pub fn parse(src: &str) -> Result<Value, String> {
         else {
             break 'main;
         };
-        let next_thing = match states.last() {
-            Some(ParserState::Quote) => {
-                states.pop();
-                Value::List(vec![Value::symbol("quote"), next_thing].into())
-            }
-            Some(ParserState::QuasiQuote) => {
-                states.pop();
-                Value::List(vec![Value::symbol("quasiquote"), next_thing].into())
-            }
-            Some(ParserState::Unquote) => {
-                states.pop();
-                Value::List(vec![Value::symbol("unquote"), next_thing].into())
-            }
-            Some(ParserState::Table) => {
-                states.pop();
-                let Value::List(l) = next_thing else {
-                    unreachable!()
-                };
-                if l.len() % 2 != 0 {
-                    return Err("Invalid table syntax".to_string());
+        loop {
+            match states.last() {
+                Some(ParserState::Quote) => {
+                    states.pop();
+                    next_thing = Value::List(vec![Value::symbol("quote"), next_thing].into());
                 }
-                let mut hm = HashMap::new();
-                for i in 0..(l.len() / 2) {
-                    hm.insert(l[2 * i].clone(), l[2 * i + 1].clone());
+                Some(ParserState::QuasiQuote) => {
+                    states.pop();
+                    next_thing = Value::List(vec![Value::symbol("quasiquote"), next_thing].into());
                 }
-                Value::Table(Rc::new(hm))
+                Some(ParserState::Unquote) => {
+                    states.pop();
+                    next_thing = Value::List(vec![Value::symbol("unquote"), next_thing].into());
+                }
+                Some(ParserState::Table) => {
+                    states.pop();
+                    let Value::List(l) = next_thing else {
+                        return Err("Invalid table syntax".to_string());
+                    };
+                    if l.len() % 2 != 0 {
+                        return Err("Invalid table syntax".to_string());
+                    }
+                    let mut hm = HashMap::new();
+                    for i in 0..(l.len() / 2) {
+                        hm.insert(l[2 * i].clone(), l[2 * i + 1].clone());
+                    }
+                    next_thing = Value::Table(Rc::new(hm));
+                }
+                Some(ParserState::Array | ParserState::List) | None => break,
             }
-            Some(ParserState::Array | ParserState::List) | None => next_thing,
-        };
+        }
         current_array.push(next_thing);
     }
     if parse_stack.is_empty() {
