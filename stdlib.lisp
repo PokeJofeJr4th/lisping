@@ -10,3 +10,4 @@
 (defun! ? (x) (if x true false))
 (defun! all? (ls) (if (empty? ls) true (if (first ls) (all? (rest ls)) false)))
 (defun! any? (ls) (if (empty? ls) false (if (first ls) true (any? (rest ls)))))
+(defun! trim (ls i) (if (= i 0) ls (trim (rest ls) (- i 1))))
