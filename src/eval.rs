@@ -47,7 +47,7 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                                 syn = f.clone();
                             }
                         }
-                        _ => return Err(Value::error("InvalidArgs", vec![syn.clone()])),
+                        _ => return Err(Value::error("InvalidArgs@if", vec![syn.clone()])),
                     }
                 } else if arr[0].is_symbol("quote") {
                     break 'main arr[1].clone();
@@ -75,11 +75,11 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     syn = arr[2].clone();
                 } else if arr[0].is_symbol("let*") {
                     if arr.len() != 3 {
-                        return Err(Value::error("InvalidArgs", arr.to_vec()));
+                        return Err(Value::error("InvalidArgs@let*", arr.to_vec()));
                     }
                     env = new_env(env);
                     let Value::List(assigns) = &arr[1] else {
-                        return Err(Value::error("InvalidArgs", arr.to_vec()));
+                        return Err(Value::error("InvalidArgs@let*", arr.to_vec()));
                     };
                     for i in 0..(assigns.len() / 2) {
                         let result = eval(assigns[2 * i + 1].clone(), env.clone())?;
@@ -90,10 +90,10 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     syn = arr[2].clone();
                 } else if arr[0].is_symbol("def!") {
                     if arr.len() != 3 {
-                        return Err(Value::error("InvalidArgs", arr.to_vec()));
+                        return Err(Value::error("InvalidArgs@def!", arr.to_vec()));
                     }
                     let Value::Symbol(i) = &arr[1] else {
-                        return Err(Value::error("InvalidArgs", arr.to_vec()));
+                        return Err(Value::error("InvalidArgs@def!", arr.to_vec()));
                     };
                     let result = eval(arr[2].clone(), env.clone())?;
                     env.borrow_mut().set(i, result);

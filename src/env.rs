@@ -79,7 +79,6 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     );
     data.insert("int".to_string(), Value::function(Rc::new(builtins::int)));
     data.insert("chr".to_string(), Value::function(Rc::new(builtins::chr)));
-    data.insert("map".to_string(), Value::function(Rc::new(builtins::map)));
     data.insert("nth".to_string(), Value::function(Rc::new(builtins::nth)));
     data.insert(
         "count".to_string(),
