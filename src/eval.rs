@@ -33,15 +33,15 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                     };
                 } else if arr[0].is_symbol("if") {
                     match &arr[1..] {
-                        [cond, t] => {
-                            if eval(cond.clone(), env.clone())?.is_truthy() {
+                        [condition, t] => {
+                            if eval(condition.clone(), env.clone())?.is_truthy() {
                                 syn = t.clone();
                             } else {
                                 break 'main Value::symbol("nil");
                             }
                         }
-                        [cond, t, f] => {
-                            if eval(cond.clone(), env.clone())?.is_truthy() {
+                        [condition, t, f] => {
+                            if eval(condition.clone(), env.clone())?.is_truthy() {
                                 syn = t.clone();
                             } else {
                                 syn = f.clone();

@@ -118,6 +118,9 @@ pub fn print(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     Ok(Value::nil())
 }
 
+/// # Panics
+/// If something goes wrong reading from stdin
+#[allow(unused_variables)]
 pub fn input(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let mut buf = String::new();
     stdin().read_line(&mut buf).unwrap();
@@ -469,7 +472,10 @@ pub fn findall(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let re = match Regex::new(re) {
         Ok(re) => re,
         Err(regex::Error::CompiledTooBig(i)) => {
-            return Err(Value::error("RegexTooLong", vec![Value::Int(i as i32)]))
+            return Err(Value::error(
+                "RegexTooLong",
+                vec![i32::try_from(i).map_or_else(|_| Value::String(i.to_string()), Value::Int)],
+            ))
         }
         Err(regex::Error::Syntax(syn)) => {
             return Err(Value::error("InvalidRegex", vec![Value::String(syn)]))
@@ -478,9 +484,15 @@ pub fn findall(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     };
     Ok(Value::List(Rc::from(
         re.captures_iter(haystack)
-            .map(|m| m.get(1).unwrap())
+            .map(|m| m.iter().flatten().collect::<Vec<_>>())
             .filter(|s| !s.is_empty())
-            .map(|m| Value::String(m.as_str().to_string()))
+            .map(|m| {
+                Value::List(
+                    m.into_iter()
+                        .map(|m| Value::String(m.as_str().to_string()))
+                        .collect(),
+                )
+            })
             .collect::<Vec<Value>>(),
     )))
 }
@@ -498,10 +510,17 @@ pub fn count(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() != 1 {
         return Err(Value::error("InvalidArgs", args));
     }
-    match args.remove(0) {
-        Value::List(l) => Ok(Value::Int(l.len() as i32)),
-        Value::String(s) => Ok(Value::Int(s.len() as i32)),
-        Value::Table(t) => Ok(Value::Int(t.len() as i32)),
-        other => Err(Value::error("NotASequence", vec![other])),
+    let i = match args.remove(0) {
+        Value::List(l) => l.len(),
+        Value::String(s) => s.len(),
+        Value::Table(t) => t.len(),
+        other => return Err(Value::error("NotASequence", vec![other])),
+    };
+    match i32::try_from(i) {
+        Ok(i) => Ok(Value::Int(i)),
+        Err(e) => Err(Value::error(
+            "Overflow",
+            vec![Value::String(i.to_string()), Value::String(e.to_string())],
+        )),
     }
 }

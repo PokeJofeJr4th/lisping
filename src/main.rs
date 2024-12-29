@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic, clippy::nursery)]
+#![allow(clippy::mutable_key_type)]
 use std::{
     cell::RefCell,
     fs,
