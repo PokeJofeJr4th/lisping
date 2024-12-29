@@ -3,7 +3,7 @@
 (defun! next (reader) [(first reader) (rest reader)])
 
 (defun! read_str (s) (first (read_form
-    (findall "[\\s,]*(~@|[\\[\\]{}()'`~^@]|\"(?:\\\\.|[^\\\\\"])*\"?|;.*|[^\\s\\[\\]{}('\"`,;)]*)" s))
+    (map (findall "[\\s,]*(~@|[\\[\\]{}()'`~^@]|\"(?:\\\\.|[^\\\\\"])*\"?|;.*|[^\\s\\[\\]{}('\"`,;)]*)" s) (\ (x) (nth x 1))))
 ))
 
 # read a single atom or list
