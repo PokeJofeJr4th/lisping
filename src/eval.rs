@@ -250,6 +250,9 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                             }
                             syn = eval(*body, sub_env)?;
                         }
+                        Value::Atom(at) if arr.len() == 1 => {
+                            break 'main at.read().unwrap().clone();
+                        }
                         other => return Err(Value::error("NotAFunction", vec![other])),
                     }
                 }

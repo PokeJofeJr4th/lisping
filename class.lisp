@@ -17,7 +17,6 @@
         spread (\ (ls) (if (empty? ls) [] (cons (first (first ls)) (cons (nth (first ls) 1) (spread (rest ls))))))
         # list of fname,fbody,...,{}
         funcs (cons {} (spread (funcs body)))
-        _ (print funcs)
         # table with the functions
         class-body (apply assoc funcs)
     ) (if (contains? class-body 'init)

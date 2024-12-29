@@ -1,5 +1,6 @@
 #![allow(clippy::needless_pass_by_value, clippy::missing_errors_doc)]
 use std::io::stdin;
+use std::sync::RwLock;
 use std::{collections::HashMap, rc::Rc};
 
 use regex::Regex;
@@ -44,7 +45,10 @@ pub fn mul(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
 
 pub fn div(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     let [Value::Int(a), Value::Int(b)] = &args[..] else {
-        return Err(Value::error("InvalidArgs@div", vec![Value::List(args.into())]));
+        return Err(Value::error(
+            "InvalidArgs@div",
+            vec![Value::List(args.into())],
+        ));
     };
     if *b == 0 {
         Err(Value::error("DivideByZero", vec![]))
@@ -144,6 +148,7 @@ pub fn typ(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
         Value::Function { is_macro, .. } | Value::Lambda { is_macro, .. } => {
             Value::symbol(if *is_macro { "macro" } else { "function" })
         }
+        Value::Atom(_) => Value::symbol("atom"),
     })
 }
 
@@ -488,4 +493,45 @@ pub fn count(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
             vec![Value::String(i.to_string()), Value::String(e.to_string())],
         )),
     }
+}
+
+/// # Panics
+pub fn set_atom(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
+    if args.len() != 2 {
+        return Err(Value::error("InvalidArgs@set!", args));
+    }
+    let Value::Atom(at) = &args[0] else {
+        return Err(Value::error("InvalidArgs@set!", args));
+    };
+    Ok(core::mem::replace(
+        &mut *at.write().unwrap(),
+        args[1].clone(),
+    ))
+}
+
+pub fn atom(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
+    if args.len() != 1 {
+        return Err(Value::error("InvalidArgs@atom", args));
+    }
+    Ok(Value::Atom(Rc::new(RwLock::new(args[0].clone()))))
+}
+
+/// # Panics
+pub fn inspect_atom(args: Vec<Value>, env: Env) -> Result<Value, Value> {
+    if args.len() != 2 {
+        return Err(Value::error("InvalidArgs@inspect!", args));
+    }
+    let Value::Atom(at) = &args[0] else {
+        return Err(Value::error("InvalidArgs@inspect!", args));
+    };
+    let mut atl = at.write().unwrap();
+    *atl = apply(
+        vec![
+            args[1].clone(),
+            Value::List(Rc::new([atl.clone()])),
+        ],
+        env,
+    )?;
+    drop(atl);
+    Ok(Value::nil())
 }

@@ -3,6 +3,7 @@ use std::{
     fmt::{Debug, Display},
     hash::Hash,
     rc::Rc,
+    sync::RwLock,
 };
 
 use crate::{env::Env, eval::eval};
@@ -45,6 +46,10 @@ pub enum Value {
         captures: Env,
         is_macro: bool,
     },
+    /// A shared mutable reference to a value. When used as a function with no arguments, returns the inner value.
+    ///
+    /// Evaluates to itself
+    Atom(Rc<RwLock<Value>>),
 }
 
 impl Value {
@@ -71,7 +76,8 @@ impl Value {
             | Self::Symbol(_)
             | Self::Function { .. }
             | Self::Table(_)
-            | Self::Lambda { .. }) => Ok(other.clone()),
+            | Self::Lambda { .. }
+            | Self::Atom(..)) => Ok(other.clone()),
             Self::List(vec) => {
                 if vec.first().is_some_and(|val| val.is_symbol("unquote")) {
                     eval(vec[1].clone(), env)
@@ -120,6 +126,11 @@ impl Value {
     }
 }
 
+impl Default for Value {
+    fn default() -> Self {
+        Self::nil()
+    }
+}
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -148,6 +159,7 @@ impl Display for Value {
                 write!(f, "}}")
             }
             Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
+            Self::Atom(a) => write!(f, "#<atom:{:?}>", a.read().unwrap()),
         }
     }
 }
@@ -181,6 +193,7 @@ impl Debug for Value {
                 write!(f, "}}")
             }
             Self::Function { .. } | Self::Lambda { .. } => write!(f, "#<function>"),
+            Self::Atom(a) => write!(f, "#<atom:{:?}>", a.read().unwrap()),
         }
     }
 }
@@ -255,6 +268,10 @@ impl Hash for Value {
                     k.hash(state);
                     v.hash(state);
                 }
+            }
+            Self::Atom(a) => {
+                // hash an Atom on its memory address
+                (&**a as *const RwLock<Value>).hash(state);
             }
         }
     }

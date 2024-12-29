@@ -116,6 +116,10 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         Value::function(builtins::type_is("function")),
     );
     data.insert(
+        "atom?".to_string(),
+        Value::function(builtins::type_is("atom")),
+    );
+    data.insert(
         "macro?".to_string(),
         Value::function(builtins::type_is("macro")),
     );
@@ -146,6 +150,15 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
     data.insert(
         "macro".to_string(),
         Value::function(Rc::new(builtins::as_macro)),
+    );
+    data.insert("atom".to_string(), Value::function(Rc::new(builtins::atom)));
+    data.insert(
+        "set!".to_string(),
+        Value::function(Rc::new(builtins::set_atom)),
+    );
+    data.insert(
+        "inspect!".to_string(),
+        Value::function(Rc::new(builtins::inspect_atom)),
     );
     data.insert("*ARGS*".to_string(), Value::List(args));
     let env = Rc::new(RefCell::new(EnvData { parent: None, data }));
