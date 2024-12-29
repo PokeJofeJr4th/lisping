@@ -1,4 +1,8 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::HashMap,
+    rc::Rc,
+    sync::{LazyLock, RwLock},
+};
 
 use crate::{
     env::{new_env, Env},
@@ -6,6 +10,9 @@ use crate::{
 };
 
 pub mod builtins;
+
+pub static DOCS: LazyLock<RwLock<HashMap<String, String>>> =
+    LazyLock::new(|| RwLock::new(HashMap::from([])));
 
 /// syntax => value
 /// # Panics
@@ -157,6 +164,29 @@ pub fn eval(mut syn: Value, mut env: Env) -> Result<Value, Value> {
                             return Err(e);
                         }
                     }
+                } else if arr[0].is_symbol("doc") {
+                    if arr.len() != 3 {
+                        return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
+                    }
+                    let Value::Symbol(symbol) = arr[1].clone() else {
+                        return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
+                    };
+                    let Value::String(docstring) = eval(arr[2].clone(), env)? else {
+                        return Err(Value::error("InvalidArgs@doc", arr.to_vec()));
+                    };
+                    DOCS.write().unwrap().insert(symbol, docstring);
+                    break 'main Value::nil();
+                } else if arr[0].is_symbol("help") {
+                    if arr.len() != 2 {
+                        return Err(Value::error("InvalidArgs@help", arr.to_vec()));
+                    }
+                    let Value::Symbol(symbol) = &arr[1] else {
+                        return Err(Value::error("InvalidArgs@help", arr.to_vec()));
+                    };
+                    if let Some(docstr) = DOCS.read().unwrap().get(symbol) {
+                        println!("{docstr}");
+                    }
+                    break 'main Value::nil();
                 } else {
                     match eval(arr[0].clone(), env.clone())? {
                         Value::Function {
