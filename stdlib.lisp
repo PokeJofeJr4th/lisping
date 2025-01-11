@@ -6,14 +6,17 @@
 ## usage: (defun! my-function (my function parameters) (evaluate the return value))
 (defmacro! defun! (name args body) `(def! ~name (\ ~args ~body)))
 
-## Evaluate all arguments and return the last one
-(defun! do x (last x))
+## Concatenate all of the arguments into a list
+(defun! list x x)
 
 ## Evaluate and discard the result of an expression until a condition is met
 (defmacro! while (cond body) `(if ~cond (do ~body (while ~cond ~body))))
 
 ## Return false if the provided value is truthy, and true otherwise
 (defun! not (x) (if x false true))
+
+## Convert the provided value to a boolean
+(defun! bool (x) (if x true false))
 
 ## Create a range of numbers from the start to the end
 (defun! range (start end) (if (< start end) (cons start (range (+ start 1) end)) []))
@@ -24,14 +27,11 @@
 ## Check if a table, list, or string is empty
 (defun! empty? (x) (= (count x) 0))
 
-## Convert a value to a boolean
-(defun! ? (x) (if x true false))
+## Return true if the list is empty or if every of the parameters is truthy
+(defun! all? ls (if (empty? ls) true (if (first ls) (all? (rest ls)) false)))
 
-## Return true if the list is empty or if every value of the list is truthy
-(defun! all? (ls) (if (empty? ls) true (if (first ls) (all? (rest ls)) false)))
-
-## Return true if any value in the list is truthy
-(defun! any? (ls) (if (empty? ls) false (if (first ls) true (any? (rest ls)))))
+## Return true if any of the parameters is truthy
+(defun! any? ls (if (empty? ls) false (if (first ls) true (any? (rest ls)))))
 
 ## Return a copy of the provided list with a given number of values removed from the start
-(defun! trim (ls i) (if (= i 0) ls (trim (rest ls) (- i 1))))
+(defun! trim (ls i) (if (any? (= i 0) (empty? ls)) ls (trim (rest ls) (- i 1))))

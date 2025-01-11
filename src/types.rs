@@ -271,7 +271,7 @@ impl Hash for Value {
             }
             Self::Atom(a) => {
                 // hash an Atom on its memory address
-                (&**a as *const RwLock<Value>).hash(state);
+                core::ptr::from_ref(&**a).hash(state);
             }
         }
     }
