@@ -60,7 +60,8 @@ pub fn default_env(args: Rc<[Value]>) -> Env {
         "+" builtins::add => "Calculate the sum of the arguments";
         "-" builtins::sub => "Calculate the difference between arguments. One argument calculates the negative.";
         "*" builtins::mul => "Calculate the product of the arguments.";
-        "/" builtins::div => "Calculate the ratio between two arguments.";
+        "/" builtins::div => "Divide the two arguments, rounding down.";
+        "%" builtins::div => "Calculate the remainder when dividing the two arguments.";
         "=" builtins::eq => "Check if two values are equal";
         "<" builtins::lt => "Check if one numerical value is less than antother";
         "<=" builtins::le => "Check if one numerical value is less than or equal to another";

@@ -57,6 +57,20 @@ pub fn div(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     }
 }
 
+pub fn rem(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
+    let [Value::Int(a), Value::Int(b)] = &args[..] else {
+        return Err(Value::error(
+            "InvalidArgs@div",
+            vec![Value::List(args.into())],
+        ));
+    };
+    if *b == 0 {
+        Err(Value::error("DivideByZero", vec![]))
+    } else {
+        Ok(Value::Int(*a % *b))
+    }
+}
+
 #[allow(clippy::needless_pass_by_value)]
 pub fn eq(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
     if args.len() <= 1 || args.iter().skip(1).all(|x| x == &args[0]) {

@@ -21,6 +21,9 @@
 ## Create a range of numbers from the start to the end
 (defun! range (start end) (if (< start end) (cons start (range (+ start 1) end)) []))
 
+## Create a list with the given element repeated the given number of times
+(defun! repeat (x l) (if (<= l 0) [] (cons x (repeat x (- l 1)))))
+
 ## Apply a function to each element of a list
 (defun! map (l func) (cons (func (first l)) (map (rest l) func)))
 
@@ -35,3 +38,33 @@
 
 ## Return a copy of the provided list with a given number of values removed from the start
 (defun! trim (ls i) (if (any? (= i 0) (empty? ls)) ls (trim (rest ls) (- i 1))))
+
+## Calculate a factorial
+(defun! fact (n) (apply * (cons 1 (range 1 (+ 1 n)))))
+
+## Calculate the sum of all elements in a list
+(defun! sum (n) (apply + n))
+
+## Calculate the product of all elements in a list
+(defun! prod (n) (apply * n))
+
+# ## Calculate the first number raised to the power of the second number
+# (defun! pow (x y) (apply * (cons 1 (repeat x y))))
+
+## Calculate the first number raised to the power of the second number
+(defun! pow (x y) (let* (
+    pow_helper (\ (a x y) (if (= y 0) a (pow_helper (if (odd? y) (* a x) a) (* x x) (/ y 2))))
+) (pow_helper 1 x y)))
+
+## Check if a number is even
+(defun! even? (x) (= (% x 2) 0))
+
+## Check if a number is odd
+(defun! odd? (x) (= (% x 2) 1))
+
+## Take the combinations between two numbers
+(defun! choose (a b) (
+    /
+    (apply * (range (+ b 1) (+ a 1)))
+    (fact (- a b))
+))
