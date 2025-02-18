@@ -48,13 +48,13 @@
 ## Calculate the product of all elements in a list
 (defun! prod (n) (apply * n))
 
-# ## Calculate the first number raised to the power of the second number
-# (defun! pow (x y) (apply * (cons 1 (repeat x y))))
-
 ## Calculate the first number raised to the power of the second number
-(defun! pow (x y) (let* (
-    pow_helper (\ (a x y) (if (= y 0) a (pow_helper (if (odd? y) (* a x) a) (* x x) (/ y 2))))
-) (pow_helper 1 x y)))
+(defun! ^ (x y) (apply * (cons 1 (repeat x y))))
+
+# ## Calculate the first number raised to the power of the second number
+#(defun! ^ (x y) (let* (
+#    pow_helper (\ (a x y) (if (= y 0) a (pow_helper (if (odd? y) (* a x) a) (* x x) (/ y 2))))
+#) (pow_helper 1 x y)))
 
 ## Check if a number is even
 (defun! even? (x) (= (% x 2) 0))

@@ -16,7 +16,7 @@ pub enum Value {
     /// An int literal or value
     ///
     /// Evaluates to itself
-    Int(i32),
+    Int(i128),
     /// A string literal or value
     ///
     /// Evaluates to itself

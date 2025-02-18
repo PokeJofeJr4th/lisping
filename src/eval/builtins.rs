@@ -458,7 +458,7 @@ pub fn findall(args: Vec<Value>, _env: Env) -> Result<Value, Value> {
         Err(regex::Error::CompiledTooBig(i)) => {
             return Err(Value::error(
                 "RegexTooLong",
-                vec![i32::try_from(i).map_or_else(|_| Value::String(i.to_string()), Value::Int)],
+                vec![i128::try_from(i).map_or_else(|_| Value::String(i.to_string()), Value::Int)],
             ))
         }
         Err(regex::Error::Syntax(syn)) => {
@@ -500,7 +500,7 @@ pub fn count(mut args: Vec<Value>, _env: Env) -> Result<Value, Value> {
         Value::Table(t) => t.len(),
         other => return Err(Value::error("NotASequence", vec![other])),
     };
-    match i32::try_from(i) {
+    match i128::try_from(i) {
         Ok(i) => Ok(Value::Int(i)),
         Err(e) => Err(Value::error(
             "Overflow",

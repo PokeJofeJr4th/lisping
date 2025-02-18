@@ -177,7 +177,7 @@ fn read_value(
                 chars.next();
             }
             #[allow(clippy::cast_possible_wrap)]
-            return Ok(Some(Value::Int(int_value as i32)));
+            return Ok(Some(Value::Int(int_value as i128)));
         } else if c == '"' {
             let mut string_buf = String::new();
             while let Some((_, _, c)) = chars.next() {
